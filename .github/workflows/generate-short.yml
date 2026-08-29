@@ -11,7 +11,7 @@ on:
       visual_style: { description: Modo visual, required: true, default: cartoon, type: string }
       cartoon_style: { description: Estilo do desenho, required: true, default: classic-2d, type: string }
       media_mode: { description: Mídia, required: true, default: photos, type: string }
-      voice: { description: Voz, required: true, default: piper-pt-br, type: string }
+      voice: { description: Voz, required: true, default: pt-BR-AntonioNeural, type: string }
       captions: { description: Legendas, required: true, default: "on", type: string }
       music: { description: Trilha, required: true, default: "off", type: string }
       music_volume: { description: Volume, required: true, default: medium, type: string }
@@ -37,7 +37,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core espeak-ng libsndfile1
           python -m pip install --upgrade pip
-          pip install requests==2.32.5 piper-tts==1.7.0 soundfile==0.13.1 Pillow==11.3.0 numpy==2.2.6
+          pip install requests==2.32.5 piper-tts==1.7.0 edge-tts==7.2.3 soundfile==0.13.1 Pillow==11.3.0 numpy==2.2.6
       - name: Preparar voz brasileira
         run: |
           mkdir -p models
@@ -46,6 +46,8 @@ jobs:
       - name: Gerar ilustrações Cartoon
         env:
           PIPER_MODEL_PATH: models/pt_BR-faber-medium.onnx
+          INPUT_VOICE: ${{ inputs.voice }}
+          EDGE_TTS_RATE: "-5%"
           INPUT_TOPIC: ${{ inputs.topic }}
           INPUT_PLAN_JSON: ${{ inputs.plan_json }}
           INPUT_DURATION: ${{ inputs.duration }}

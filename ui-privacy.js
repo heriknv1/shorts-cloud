@@ -1,82 +1,14 @@
 (()=>{
   const replacements=[
-    [/\bGitHub Actions\b/gi,'processamento interno'],
-    [/\bGitHub\b/gi,'serviço interno'],
-    [/\bActions\b/gi,'processamento'],
-    [/\bVercel\b/gi,'plataforma'],
-    [/\bPexels\b/gi,'biblioteca de mídia'],
-    [/\bGroq\b/gi,'serviço de inteligência'],
-    [/\bdeploy(?:ment)?\b/gi,'atualização'],
-    [/\brelease\b/gi,'publicação'],
-    [/\breposit[oó]rio\b/gi,'projeto'],
-    [/\bworkflow\b/gi,'processo'],
-    [/\brenderiza(?:r|ção|do|ndo)\b/gi,'geração'],
-    [/\brender(?:s)?\b/gi,'gerações'],
-    [/\bMP4\b/g,'vídeo']
+    [/\bGitHub Actions\b/gi,'processamento interno'],[/\bGitHub\b/gi,'serviço interno'],[/\bActions\b/gi,'processamento'],[/\bVercel\b/gi,'plataforma'],[/\bPexels\b/gi,'biblioteca de mídia'],[/\bGroq\b/gi,'serviço de inteligência'],[/\bdeploy(?:ment)?\b/gi,'atualização'],[/\brelease\b/gi,'publicação'],[/\breposit[oó]rio\b/gi,'projeto'],[/\bworkflow\b/gi,'processo'],[/\brenderiza(?:r|ção|do|ndo)\b/gi,'geração'],[/\brender(?:s)?\b/gi,'gerações'],[/\bMP4\b/g,'vídeo']
   ];
-
-  const stageMap=[
-    [/Baixar Short Cloud Studio/i,'Preparando'],
-    [/Preparar Python/i,'Preparando recursos'],
-    [/Instalar motor de vídeo/i,'Preparando recursos'],
-    [/Preparar voz brasileira/i,'Preparando narração'],
-    [/Gerar mídia e montar vídeo/i,'Criando vídeo'],
-    [/Validar MP4/i,'Finalizando vídeo'],
-    [/Validar vídeo/i,'Finalizando vídeo'],
-    [/Guardar vídeo/i,'Finalizando vídeo'],
-    [/Publicar MP4/i,'Vídeo pronto'],
-    [/Publicar vídeo/i,'Vídeo pronto']
-  ];
-
-  function clean(text){
-    if(!text)return text;
-    let out=String(text);
-    for(const [rx,value] of stageMap) out=out.replace(rx,value);
-    for(const [rx,value] of replacements) out=out.replace(rx,value);
-    out=out
-      .replace(/Escolha conteúdo, visual, mídia, voz e legenda antes de geração\.?/i,'Escolha conteúdo, visual, mídia, voz e legenda antes de criar seu vídeo.')
-      .replace(/Renders hoje/gi,'Criações hoje')
-      .replace(/Você ainda não gastou (?:um|uma) gerações?\.?/i,'Você ainda não iniciou a geração.')
-      .replace(/Pronto para geração\??/i,'Pronto para criar seu vídeo?')
-      .replace(/Nenhum(?:a)? gerações? ainda\.?/i,'Nenhum vídeo criado ainda.')
-      .replace(/Enviando vídeo para geração…?/i,'Preparando seu vídeo…')
-      .replace(/Geração iniciado/i,'Geração iniciada')
-      .replace(/o sistema busca fotos e\/ou vídeos da biblioteca de mídia de acordo com cada cena\.?/i,'o sistema seleciona fotos e/ou vídeos de acordo com cada cena.')
-      .replace(/Falha no status/gi,'Não foi possível atualizar agora')
-      .replace(/HTTP\s*\d{3}[^.\n]*/gi,'Não foi possível concluir esta etapa')
-      .replace(/API[_ -]?KEY/gi,'configuração interna')
-      .replace(/token/gi,'acesso');
-    return out;
-  }
-
-  function sanitizeNode(node){
-    if(node.nodeType===Node.TEXT_NODE){const next=clean(node.nodeValue);if(next!==node.nodeValue)node.nodeValue=next;return;}
-    if(node.nodeType!==Node.ELEMENT_NODE)return;
-    const tag=node.tagName;if(tag==='SCRIPT'||tag==='STYLE'||tag==='NOSCRIPT')return;
-    for(const attr of ['title','aria-label','placeholder'])if(node.hasAttribute?.(attr)){const old=node.getAttribute(attr),next=clean(old);if(next!==old)node.setAttribute(attr,next)}
-    node.childNodes.forEach(sanitizeNode);
-  }
-
-  function syncCaptionPreview(){
-    const size=Number(document.getElementById('captionSize')?.value||56),c=document.getElementById('previewCaption');
-    if(c)c.style.fontSize=`${Math.max(10,Math.round(size*.22))}px`;
-  }
-
-  function configureCaptionSizes(){
-    const select=document.getElementById('captionSize');if(!select||select.dataset.recalibrated)return;
-    select.dataset.recalibrated='1';
-    select.innerHTML='<option value="42">Pequena</option><option value="56" selected>Média</option><option value="70">Grande</option><option value="84">Extra grande</option>';
-    select.value='56';
-    select.addEventListener('change',()=>setTimeout(syncCaptionPreview,0));
-    setTimeout(()=>{select.dispatchEvent(new Event('change',{bubbles:true}));syncCaptionPreview()},0);
-  }
-
-  function loadGenerationControls(){
-    if(document.querySelector('script[data-generation-controls]'))return;
-    const s=document.createElement('script');s.src='/generation-control.js';s.dataset.generationControls='1';document.head.appendChild(s);
-  }
-
-  function run(){sanitizeNode(document.body);configureCaptionSizes();loadGenerationControls();syncCaptionPreview()}
+  const stageMap=[[/Baixar Short Cloud Studio/i,'Preparando'],[/Preparar Python/i,'Preparando recursos'],[/Instalar motor de vídeo/i,'Preparando recursos'],[/Preparar voz brasileira/i,'Preparando narração'],[/Gerar mídia e montar vídeo/i,'Criando vídeo'],[/Validar MP4/i,'Finalizando vídeo'],[/Validar vídeo/i,'Finalizando vídeo'],[/Guardar vídeo/i,'Finalizando vídeo'],[/Publicar MP4/i,'Vídeo pronto'],[/Publicar vídeo/i,'Vídeo pronto']];
+  function clean(text){if(!text)return text;let out=String(text);for(const [rx,value] of stageMap)out=out.replace(rx,value);for(const [rx,value] of replacements)out=out.replace(rx,value);return out.replace(/Escolha conteúdo, visual, mídia, voz e legenda antes de geração\.?/i,'Escolha conteúdo, visual, mídia, voz e legenda antes de criar seu vídeo.').replace(/Renders hoje/gi,'Criações hoje').replace(/Você ainda não gastou (?:um|uma) gerações?\.?/i,'Você ainda não iniciou a geração.').replace(/Pronto para geração\??/i,'Pronto para criar seu vídeo?').replace(/Nenhum(?:a)? gerações? ainda\.?/i,'Nenhum vídeo criado ainda.').replace(/Enviando vídeo para geração…?/i,'Preparando seu vídeo…').replace(/Geração iniciado/i,'Geração iniciada').replace(/o sistema busca fotos e\/ou vídeos da biblioteca de mídia de acordo com cada cena\.?/i,'o sistema seleciona fotos e/ou vídeos de acordo com cada cena.').replace(/Falha no status/gi,'Não foi possível atualizar agora').replace(/HTTP\s*\d{3}[^.\n]*/gi,'Não foi possível concluir esta etapa').replace(/API[_ -]?KEY/gi,'configuração interna').replace(/token/gi,'acesso');}
+  function sanitizeNode(node){if(node.nodeType===Node.TEXT_NODE){const next=clean(node.nodeValue);if(next!==node.nodeValue)node.nodeValue=next;return;}if(node.nodeType!==Node.ELEMENT_NODE)return;const tag=node.tagName;if(tag==='SCRIPT'||tag==='STYLE'||tag==='NOSCRIPT')return;for(const attr of ['title','aria-label','placeholder'])if(node.hasAttribute?.(attr)){const old=node.getAttribute(attr),next=clean(old);if(next!==old)node.setAttribute(attr,next)}node.childNodes.forEach(sanitizeNode);}
+  function syncCaptionPreview(){const size=Number(document.getElementById('captionSize')?.value||56),c=document.getElementById('previewCaption');if(c)c.style.fontSize=`${Math.max(10,Math.round(size*.22))}px`;}
+  function configureCaptionSizes(){const select=document.getElementById('captionSize');if(!select||select.dataset.recalibrated)return;select.dataset.recalibrated='1';select.innerHTML='<option value="42">Pequena</option><option value="56" selected>Média</option><option value="70">Grande</option><option value="84">Extra grande</option>';select.value='56';select.addEventListener('change',()=>setTimeout(syncCaptionPreview,0));setTimeout(()=>{select.dispatchEvent(new Event('change',{bubbles:true}));syncCaptionPreview()},0);}
+  function loadScript(src,key){if(document.querySelector(`script[data-${key}]`))return;const s=document.createElement('script');s.src=src;s.dataset[key]='1';document.head.appendChild(s);}
+  function run(){sanitizeNode(document.body);configureCaptionSizes();loadScript('/generation-control.js','generationControls');loadScript('/request-resilience.js','requestResilience');syncCaptionPreview()}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
   new MutationObserver(muts=>{for(const m of muts){if(m.type==='characterData')sanitizeNode(m.target);m.addedNodes.forEach(sanitizeNode)}}).observe(document.documentElement,{subtree:true,childList:true,characterData:true});
 })();

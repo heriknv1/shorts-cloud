@@ -16,7 +16,7 @@ on:
       voice_speed: { description: Velocidade da voz, required: true, default: default, type: string }
       captions: { description: Legendas, required: true, default: "on", type: string }
       caption_font: { description: Fonte, required: true, default: "Montserrat", type: string }
-      caption_size: { description: Tamanho da fonte, required: true, default: "38", type: string }
+      caption_size: { description: Tamanho da fonte, required: true, default: "56", type: string }
       music: { description: Trilha, required: true, default: "off", type: string }
       music_volume: { description: Volume, required: true, default: medium, type: string }
       request_id: { description: ID, required: false, type: string }
@@ -68,23 +68,29 @@ jobs:
           INPUT_CAPTION_SIZE: ${{ inputs.caption_size }}
           INPUT_MUSIC: ${{ inputs.music }}
           INPUT_MUSIC_VOLUME: ${{ inputs.music_volume }}
-        run: python scripts/generate_turbo.py
-      - name: Validar MP4
         run: |
-          test -s output/final.mp4
-          ffprobe -v error -show_entries format=duration,size -of json output/final.mp4
+          python scripts/apply_render_policies.py
+          python scripts/generate_turbo.py
+          python scripts/prepare_output_name.py
+      - name: Validar vídeo
+        run: |
+          VIDEO="output/$(cat output/video_name.txt)"
+          test -s "$VIDEO"
+          ffprobe -v error -show_entries format=duration,size -of json "$VIDEO"
       - name: Guardar vídeo
         uses: actions/upload-artifact@v4
         with:
           name: short-cloud-${{ github.run_id }}
           path: |
-            output/final.mp4
+            output/*.mp4
             output/metadata.json
+            output/video_name.txt
           retention-days: 2
           compression-level: 0
-      - name: Publicar MP4
+      - name: Publicar vídeo
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TITLE=$(python -c "import json; print(json.load(open('output/metadata.json',encoding='utf-8')).get('title','Short Cloud Studio'))")
-          gh release create "short-${GITHUB_RUN_ID}" output/final.mp4 output/metadata.json --title "$TITLE" --notes "Vídeo gerado conforme as escolhas do editor."
+          VIDEO="output/$(cat output/video_name.txt)"
+          gh release create "short-${GITHUB_RUN_ID}" "$VIDEO" output/metadata.json --title "$TITLE" --notes "Vídeo gerado conforme as escolhas do editor."

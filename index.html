@@ -4,53 +4,50 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#0b0d12" />
-  <title>Shorts Cloud</title>
+  <title>Shorts Cloud Studio</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <main class="shell">
     <section class="hero">
-      <span class="pill">3 vídeos por dia • cloud</span>
-      <h1>Shorts Cloud</h1>
-      <p>Crie Shorts de 60–70 segundos sem renderizar no seu celular ou PC.</p>
+      <span class="pill">3 renders por dia • cloud</span>
+      <h1>Shorts Cloud Studio</h1>
+      <p>Planeje, revise e renderize Shorts de 60–70 segundos sem pesar no seu computador ou tablet.</p>
+    </section>
+
+    <section class="top-grid">
+      <article class="card compact">
+        <span class="eyebrow">Acesso</span>
+        <div class="row">
+          <input id="pin" type="password" placeholder="PIN do aplicativo" autocomplete="current-password" />
+          <button class="secondary" id="savePinBtn">Entrar</button>
+        </div>
+      </article>
+      <article class="card compact quota-card">
+        <div><span class="eyebrow">Cota de render hoje</span><strong id="quotaText">informe o PIN</strong></div>
+        <button class="ghost" id="refreshBtn">Atualizar</button>
+      </article>
     </section>
 
     <section class="card">
-      <h2>Acesso</h2>
-      <div class="row">
-        <input id="pin" type="password" inputmode="numeric" placeholder="Seu PIN do aplicativo" autocomplete="current-password" />
-        <button class="secondary" id="savePinBtn">Entrar</button>
+      <div class="section-head">
+        <div><span class="eyebrow">1. Ideia</span><h2>O que vamos contar?</h2></div>
+        <span class="step-note">Criar o plano não consome render.</span>
       </div>
-      <p class="hint">O PIN fica salvo somente nesta sessão do navegador.</p>
-    </section>
 
-    <section class="card quota-card">
-      <div>
-        <span class="muted">Cota de hoje</span>
-        <strong id="quotaText">informe o PIN</strong>
-      </div>
-      <button class="ghost" id="refreshBtn">Atualizar</button>
-    </section>
+      <label for="topic">Tema do vídeo</label>
+      <textarea id="topic" rows="3" placeholder="Ex.: Davi e Golias — conte a história de forma fiel, emocionante e fácil de acompanhar"></textarea>
 
-    <section class="card">
-      <h2>Gerar temas</h2>
-      <div class="row">
-        <input id="niche" placeholder="Ex.: histórias bíblicas, curiosidades históricas" maxlength="160" />
-        <button id="ideasBtn" class="secondary">Sugerir 3</button>
+      <div class="idea-row">
+        <input id="niche" placeholder="Nicho para receber 3 sugestões, ex.: histórias bíblicas" maxlength="160" />
+        <button id="ideasBtn" class="secondary">Sugerir 3 ideias</button>
       </div>
-      <p class="hint">A sugestão usa Groq. Você também pode escrever os três temas manualmente.</p>
+      <div id="ideaChips" class="chips"></div>
     </section>
 
     <section class="card">
-      <h2>Vídeos de hoje</h2>
-      <label>Tema 1</label>
-      <textarea id="topic1" rows="2" placeholder="Ex.: Davi e Golias — o detalhe que muita gente ignora"></textarea>
-      <label>Tema 2</label>
-      <textarea id="topic2" rows="2" placeholder="Ex.: O que aconteceu na noite em que Daniel foi lançado aos leões"></textarea>
-      <label>Tema 3</label>
-      <textarea id="topic3" rows="2" placeholder="Ex.: Por que Gideão ficou com apenas 300 homens"></textarea>
-
-      <div class="grid2">
+      <div class="section-head"><div><span class="eyebrow">2. Direção</span><h2>Escolha como o vídeo deve parecer</h2></div></div>
+      <div class="grid3">
         <div>
           <label>Duração</label>
           <select id="duration">
@@ -60,25 +57,89 @@
           </select>
         </div>
         <div>
-          <label>Estilo</label>
-          <select id="style">
-            <option>cinematográfico e emocional</option>
-            <option>documental e intrigante</option>
-            <option>dramático e misterioso</option>
-            <option>rápido e energético</option>
+          <label>Tom da história</label>
+          <select id="tone">
+            <option value="cinematic">Cinematográfico e emocional</option>
+            <option value="documentary">Documental e intrigante</option>
+            <option value="dramatic">Dramático e misterioso</option>
+            <option value="energetic">Rápido e energético</option>
+          </select>
+        </div>
+        <div>
+          <label>Estilo visual</label>
+          <select id="visualStyle">
+            <option value="realistic">Imagens reais</option>
+            <option value="cartoon">Desenho / ilustração</option>
+          </select>
+        </div>
+        <div>
+          <label>Tipo de mídia</label>
+          <select id="mediaMode">
+            <option value="photos" selected>Fotos com movimento</option>
+            <option value="hybrid">Híbrido — foto + vídeo</option>
+            <option value="videos">Vídeos reais</option>
+          </select>
+        </div>
+        <div>
+          <label>Voz</label>
+          <select id="voice">
+            <optgroup label="Masculinas">
+              <option value="pt-BR-AntonioNeural">Antônio — natural</option>
+              <option value="pt-BR-DonatoNeural">Donato — firme</option>
+              <option value="pt-BR-FabioNeural">Fábio — suave</option>
+              <option value="pt-BR-NicolauNeural">Nicolau — narrador</option>
+            </optgroup>
+            <optgroup label="Femininas">
+              <option value="pt-BR-FranciscaNeural">Francisca — natural</option>
+              <option value="pt-BR-ThalitaNeural">Thalita — clara</option>
+              <option value="pt-BR-ManuelaNeural">Manuela — suave</option>
+              <option value="pt-BR-YaraNeural">Yara — expressiva</option>
+            </optgroup>
+          </select>
+        </div>
+        <div>
+          <label>Legendas</label>
+          <select id="captions">
+            <option value="on" selected>Ativadas — discretas no rodapé</option>
+            <option value="off">Sem legenda</option>
           </select>
         </div>
       </div>
-
-      <button id="generateBtn" class="primary">Gerar vídeos preenchidos</button>
-      <div id="message" class="message" hidden></div>
+      <div id="cartoonNotice" class="notice" hidden>No modo desenho, o sistema usa fotos adequadas e aplica uma estilização ilustrada localmente. Não depende de créditos de geração de imagem.</div>
     </section>
 
     <section class="card">
-      <div class="section-title">
-        <h2>Status</h2>
-        <span class="muted">atualiza automaticamente</span>
+      <div class="section-head"><div><span class="eyebrow">3. Referências</span><h2>Envie até 3 imagens</h2></div><span class="step-note">Opcional</span></div>
+      <label class="upload-box" for="references">
+        <input id="references" type="file" accept="image/jpeg,image/png,image/webp" multiple />
+        <strong>Escolher imagens de referência</strong>
+        <span>A IA analisa as referências para orientar cenário, roupas, composição e clima. As imagens não são enviadas ao GitHub.</span>
+      </label>
+      <div id="referencePreview" class="reference-grid"></div>
+    </section>
+
+    <section class="card action-card">
+      <div>
+        <span class="eyebrow">4. Plano seguro</span>
+        <h2>Revise antes de renderizar</h2>
+        <p class="muted">Primeiro geramos somente roteiro + cenas. Só o botão de render final entra na sua cota de 3 vídeos.</p>
       </div>
+      <button id="planBtn" class="primary">Criar plano do vídeo</button>
+      <div id="message" class="message" hidden></div>
+    </section>
+
+    <section id="planSection" class="card" hidden>
+      <div class="section-head"><div><span class="eyebrow">5. Revisão</span><h2 id="planTitle">Plano do vídeo</h2></div><span class="badge ok">Não renderizado</span></div>
+      <p id="planSummary" class="summary"></p>
+      <div id="sceneEditor" class="scene-list"></div>
+      <div class="approval-bar">
+        <div><strong>Confira principalmente a fala e o que deve aparecer.</strong><span>Você pode editar qualquer cena antes de renderizar.</span></div>
+        <button id="generateBtn" class="primary small-primary">Aprovar e gerar MP4</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-head"><div><span class="eyebrow">Histórico</span><h2>Renderizações</h2></div><span class="muted">atualiza automaticamente</span></div>
       <div id="runs" class="runs"><p class="muted">Nenhuma informação ainda.</p></div>
     </section>
   </main>

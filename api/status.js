@@ -1,6 +1,7 @@
 const { gh, config, workflowRuns, saoPauloDate } = require('../lib/github');
-const { requirePin } = require('../lib/auth');
+const { requireAuth } = require('../lib/auth');
 
+const DAILY_LIMIT = 10;
 const STEP_PROGRESS = [
   ['Baixar projeto', 10, 'Baixando projeto'],
   ['Python', 18, 'Preparando Python'],
@@ -30,8 +31,7 @@ function deriveProgress(run, jobsData) {
       progress = Math.max(progress, pct);
       stage = label;
     } else if (step.status === 'in_progress') {
-      const base = Math.max(7, pct - (name === 'Renderizar cena por cena' ? 28 : 8));
-      progress = base;
+      progress = Math.max(7, pct - (name === 'Renderizar cena por cena' ? 28 : 8));
       stage = label;
       break;
     } else if (step.status === 'queued' || step.status === 'pending') {
@@ -44,7 +44,7 @@ function deriveProgress(run, jobsData) {
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Use GET.' });
-  if (!requirePin(req, res)) return;
+  if (!requireAuth(req, res)) return;
 
   try {
     const { repo } = config();
@@ -83,7 +83,7 @@ module.exports = async function handler(req, res) {
     });
 
     res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).json({ usedToday, remaining: Math.max(0, 3 - usedToday), runs });
+    return res.status(200).json({ usedToday, dailyLimit: DAILY_LIMIT, remaining: Math.max(0, DAILY_LIMIT - usedToday), runs });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: error.message || 'Falha ao consultar status.' });

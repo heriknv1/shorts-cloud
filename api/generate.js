@@ -16,7 +16,9 @@ module.exports = async function handler(req, res) {
     const visualStyle = ['realistic','cartoon'].includes(req.body?.visualStyle) ? req.body.visualStyle : 'realistic';
     let mediaMode = ['photos','videos','hybrid'].includes(req.body?.mediaMode) ? req.body.mediaMode : 'photos';
     if (visualStyle === 'cartoon') mediaMode = 'photos';
-    const voice = String(req.body?.voice || 'pt-BR-AntonioNeural').slice(0, 80);
+    const allowedVoices = new Set(['pm_alex', 'pm_santa', 'pf_dora']);
+    const requestedVoice = String(req.body?.voice || 'pm_alex');
+    const voice = allowedVoices.has(requestedVoice) ? requestedVoice : 'pm_alex';
     const captions = req.body?.captions === 'off' ? 'off' : 'on';
 
     const cleanPlan = {

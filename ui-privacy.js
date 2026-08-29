@@ -65,7 +65,15 @@
     node.childNodes.forEach(sanitizeNode);
   }
 
-  function run(){sanitizeNode(document.body)}
+  function loadGenerationControls(){
+    if(document.querySelector('script[data-generation-controls]'))return;
+    const s=document.createElement('script');
+    s.src='/generation-control.js';
+    s.dataset.generationControls='1';
+    document.head.appendChild(s);
+  }
+
+  function run(){sanitizeNode(document.body);loadGenerationControls()}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
   new MutationObserver(muts=>{for(const m of muts){if(m.type==='characterData')sanitizeNode(m.target);m.addedNodes.forEach(sanitizeNode)}}).observe(document.documentElement,{subtree:true,childList:true,characterData:true});
 })();

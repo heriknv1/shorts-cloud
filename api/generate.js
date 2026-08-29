@@ -1,9 +1,12 @@
-const { gh, config, usedToday } = require('../lib/github');
+const { gh, config, usedToday, workflowRuns } = require('../lib/github');
 const { requireAuth } = require('../lib/auth');
 const DAILY_LIMIT=10;
 module.exports=async function handler(req,res){
   if(req.method!=='POST')return res.status(405).json({error:'Use POST.'});if(!requireAuth(req,res))return;
   try{
+    const activeData=await workflowRuns();
+    const active=(activeData.workflow_runs||[]).find(r=>r.name==='Generate Short'&&r.status!=='completed');
+    if(active)return res.status(409).json({error:'Já existe uma geração em andamento. Aguarde concluir ou cancele antes de iniciar outra.',active:true});
     const{repo}=config(),topic=String(req.body?.topic||'').trim(),plan=req.body?.plan;if(!topic)return res.status(400).json({error:'Informe o tema.'});if(!plan||!Array.isArray(plan.scenes)||plan.scenes.length<6)return res.status(400).json({error:'Crie e aprove um plano válido antes de gerar.'});
     const duration=Math.min(70,Math.max(60,Number(req.body?.duration||65))),tone=String(req.body?.tone||'cinematic').slice(0,40),allowedPresets=['biblical','devotional','cinematic','mysteries','ancient','motivation','science','true-stories','horror','life-lessons','animals'],presetKey=allowedPresets.includes(req.body?.presetKey)?req.body.presetKey:'custom';
     const visualStyle=['realistic','cartoon'].includes(req.body?.visualStyle)?req.body.visualStyle:'realistic',mediaMode=['photos','videos','hybrid'].includes(req.body?.mediaMode)?req.body.mediaMode:'hybrid',cartoonStyle=['interdimensional','paper-cut','retro-surreal','classic-2d','comic'].includes(req.body?.cartoonStyle)?req.body.cartoonStyle:'classic-2d';
@@ -14,6 +17,6 @@ module.exports=async function handler(req,res){
     if(cleanPlan.scenes.some(s=>!s.narration))return res.status(400).json({error:'Uma ou mais cenas estão sem narração.'});const planJson=JSON.stringify(cleanPlan);if(planJson.length>52000)return res.status(400).json({error:'O plano ficou grande demais.'});
     const used=await usedToday();if(used>=DAILY_LIMIT)return res.status(429).json({error:`O limite configurado de ${DAILY_LIMIT} criações de hoje já foi usado.`,usedToday:used,remaining:0});const requestId=`studio-${Date.now()}`;
     await gh(`/repos/${repo}/actions/workflows/generate-short.yml/dispatches`,{method:'POST',body:JSON.stringify({ref:'main',inputs:{topic,plan_json:planJson,duration:String(duration),tone,niche_key:presetKey,visual_style:visualStyle,cartoon_style:cartoonStyle,media_mode:mediaMode,voice,voice_pitch:voicePitch,voice_speed:voiceSpeed,captions,caption_font:captionFont,caption_size:String(captionSize),music,music_volume:musicVolume,request_id:requestId}})});
-    return res.status(202).json({ok:true,requestId,engine:'short-cloud-studio',usedToday:used+1,dailyLimit:DAILY_LIMIT,remaining:DAILY_LIMIT-used-1});
-  }catch(error){console.error(error);return res.status(500).json({error:'Não foi possível iniciar a geração agora.'})}
+    return res.status(202).json({ok:true,requestId,usedToday:used,dailyLimit:DAILY_LIMIT,remaining:DAILY_LIMIT-used});
+  }catch(error){console.error(error);return res.status(500).json({error:error.message||'Falha ao iniciar geração.'})}
 };

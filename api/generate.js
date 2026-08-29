@@ -9,7 +9,7 @@ module.exports = async function handler(req,res){
     if(!topic)return res.status(400).json({error:'Informe o tema.'});
     if(!plan||!Array.isArray(plan.scenes)||plan.scenes.length<6)return res.status(400).json({error:'Crie e aprove um plano válido antes de renderizar.'});
     const duration=Math.min(70,Math.max(60,Number(req.body?.duration||65))),tone=String(req.body?.tone||'cinematic').slice(0,40);
-    const allowedPresets=['biblical','cinematic','mysteries','ancient','motivation','science','true-stories','horror','life-lessons','animals'];
+    const allowedPresets=['biblical','devotional','cinematic','mysteries','ancient','motivation','science','true-stories','horror','life-lessons','animals'];
     const presetKey=allowedPresets.includes(req.body?.presetKey)?req.body.presetKey:'custom';
     const cartoonStyle=['interdimensional','paper-cut','retro-surreal','classic-2d','comic'].includes(req.body?.cartoonStyle)?req.body.cartoonStyle:'classic-2d';
     const voices=['pt-BR-AntonioNeural','pt-BR-FranciscaNeural','pt-BR-ThalitaNeural'];

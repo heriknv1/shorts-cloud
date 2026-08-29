@@ -1,4 +1,6 @@
 requests==2.32.5
 piper-tts==1.7.0
-edge-tts==7.2.7
+kokoro-onnx==0.6.1
+soundfile==0.13.1
+misaki-fork[en]==0.9.6
 Pillow==11.3.0

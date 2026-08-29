@@ -1,18 +1,26 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import re
 
 path=Path('scripts/generate_turbo.py')
 s=path.read_text(encoding='utf-8')
+changes=[]
+
+def replace_required(old,new,label):
+    global s
+    if old in s:
+        s=s.replace(old,new,1);changes.append(label);return
+    if new in s:
+        changes.append(label+' (já aplicado)');return
+    raise SystemExit(f'Política obrigatória não pôde ser aplicada: {label}')
 
 if 'import textwrap' not in s:
-    s=s.replace('import json, math, os, subprocess, hashlib, re','import json, math, os, subprocess, hashlib, re, textwrap')
+    replace_required('import json, math, os, subprocess, hashlib, re','import json, math, os, subprocess, hashlib, re, textwrap','suporte de quebra de legenda')
 
 old="""def clean_query(q):
     q=re.sub(r'\\b(illustration|cartoon|drawing|animated|animation)\\b',' ',str(q),flags=re.I)
     return ' '.join(q.split())[:220]
 """
-new="""RELIGIOUS_RX=re.compile(r'\\b(jesus|christ|cristo|messiah|messias|bible|biblical|bíblia|bíblico|god|deus|gospel|evangelho|baptism|batismo|prayer|oração|church|igreja|apostle|apóstolo|disciple|discípulo)\\b',re.I)
+new="""RELIGIOUS_RX=re.compile(r'\\b(jesus|christ|cristo|messiah|messias|bible|biblical|bíblia|bíblico|god|deus|gospel|evangelho|baptism|batismo|prayer|oração|church|igreja|apostle|apóstolo|disciple|discípulo|noah|noé|abraham|abraão|moses|moisés|david|davi|samson|sansão|elijah|elias|daniel|jonah|jonas|paul|paulo|peter|pedro|pentecost|pentecostes)\\b',re.I)
 CATHOLIC_RX=re.compile(r'\\b(catholic|cathedral|pope|papal|rosary|terço|crucifix|crucifixo|statue|estátua|saint|santo|santa|virgin mary|virgem maria|madonna|marian|mariana|mass|missa|monstrance|ostensório|religious icon|ícone religioso|altar candles)\\b',re.I)
 JESUS_RX=re.compile(r'\\b(jesus|jesus christ|christ|cristo|jesus cristo|messiah|messias)\\b',re.I)
 
@@ -25,7 +33,7 @@ def clean_query(q):
         q+=' evangelical protestant biblical context scripture centered no catholic icons no rosary no statues no crucifix no saint imagery no Marian imagery'
     return ' '.join(q.split())[:300]
 """
-if old in s: s=s.replace(old,new)
+replace_required(old,new,'filtro visual religioso')
 
 needle="""def ai_image(scene,path,style,niche,idx,realistic=False):
     desc=str(scene.get('visual_description') or scene.get('visual_query') or 'cinematic scene')
@@ -38,15 +46,13 @@ replacement="""def ai_image(scene,path,style,niche,idx,realistic=False):
         if realistic and JESUS_RX.search(desc+' '+str(scene.get('narration',''))):
             desc=JESUS_RX.sub(' ',desc)+' ancient biblical environment, disciples and crowd, symbolic environmental composition, no identifiable or photorealistic Jesus figure'
 """
-if needle in s: s=s.replace(needle,replacement)
+replace_required(needle,replacement,'proteção de imagem religiosa')
 
-s=s.replace("if niche in {'biblical','devotional'}: style_text+=', ancient biblical Middle East when historical, authentic tunics and sandals, no modern objects, no medieval European armor'",
-"if religious: style_text+=', evangelical Protestant biblical visual language, scripture-centered, ancient biblical Middle East when historical, authentic tunics and sandals, no modern objects, no medieval European armor, no Catholic iconography, no rosary, no statues, no crucifix, no saints, no Marian imagery, no ornate cathedral altar'")
+replace_required("if niche in {'biblical','devotional'}: style_text+=', ancient biblical Middle East when historical, authentic tunics and sandals, no modern objects, no medieval European armor'","if religious: style_text+=', evangelical Protestant biblical visual language, scripture-centered, ancient biblical Middle East when historical, authentic tunics and sandals, no modern objects, no medieval European armor, no Catholic iconography, no rosary, no statues, no crucifix, no saints, no Marian imagery, no ornate cathedral altar'",'estilo religioso')
 
-start=s.find('def make_srt(scenes,durations,path):')
-end=s.find('\ndef music_track(',start)
-if start!=-1 and end!=-1:
-    dynamic="""def make_srt(scenes,durations,path):
+start=s.find('def make_srt(scenes,durations,path):');end=s.find('\ndef music_track(',start)
+if start==-1 or end==-1: raise SystemExit('Política obrigatória não pôde ser aplicada: legendas')
+dynamic="""def make_srt(scenes,durations,path):
     font_size=max(36,min(92,int(os.getenv('INPUT_CAPTION_SIZE','56'))))
     per=6 if font_size<=44 else 5 if font_size<=58 else 4 if font_size<=72 else 3
     width=30 if font_size<=44 else 25 if font_size<=58 else 21 if font_size<=72 else 17
@@ -61,10 +67,16 @@ if start!=-1 and end!=-1:
         offset+=dur
     path.write_text('\\n'.join(lines),encoding='utf-8')
 """
+current=s[start:end]
+if 'font_size=max(36,min(92' not in current:
     s=s[:start]+dynamic+s[end:]
+changes.append('legendas responsivas')
 
-s=s.replace("font_size=max(24,min(64,font_size))","font_size=max(36,min(92,font_size))")
-s=s.replace("Alignment=2,MarginV=55,Bold=1","Alignment=2,MarginL=82,MarginR=82,MarginV=92,Bold=1")
+if 'font_size=max(24,min(64,font_size))' in s:s=s.replace('font_size=max(24,min(64,font_size))','font_size=max(36,min(92,font_size))');changes.append('escala de fonte')
+elif 'font_size=max(36,min(92,font_size))' not in s:raise SystemExit('Política obrigatória não pôde ser aplicada: escala de fonte')
+
+if 'Alignment=2,MarginV=55,Bold=1' in s:s=s.replace('Alignment=2,MarginV=55,Bold=1','Alignment=2,MarginL=82,MarginR=82,MarginV=92,Bold=1');changes.append('área segura da legenda')
+elif 'Alignment=2,MarginL=82,MarginR=82,MarginV=92,Bold=1' not in s:raise SystemExit('Política obrigatória não pôde ser aplicada: área segura da legenda')
 
 path.write_text(s,encoding='utf-8')
-print('render policies applied')
+print('Políticas verificadas:',', '.join(changes))

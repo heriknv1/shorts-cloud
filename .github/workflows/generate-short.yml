@@ -8,15 +8,39 @@ on:
         description: Tema do vídeo
         required: true
         type: string
+      plan_json:
+        description: Plano aprovado em JSON
+        required: true
+        type: string
       duration:
         description: Duração alvo (60-70)
         required: true
         default: "65"
         type: string
-      style:
-        description: Estilo do vídeo
+      tone:
+        description: Tom narrativo
         required: true
-        default: cinematográfico e emocional
+        default: cinematic
+        type: string
+      visual_style:
+        description: realistic ou cartoon
+        required: true
+        default: realistic
+        type: string
+      media_mode:
+        description: photos, videos ou hybrid
+        required: true
+        default: photos
+        type: string
+      voice:
+        description: Voz neural pt-BR
+        required: true
+        default: pt-BR-AntonioNeural
+        type: string
+      captions:
+        description: on ou off
+        required: true
+        default: "on"
         type: string
       request_id:
         description: Identificador da solicitação
@@ -27,14 +51,12 @@ permissions:
   contents: write
 
 env:
-  GROQ_MODEL: qwen/qwen3.8-27b
-  PIPER_VOICE: pt_BR-faber-medium
   PIPER_MODEL_PATH: models/pt_BR-faber-medium.onnx
 
 jobs:
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Baixar projeto
         uses: actions/checkout@v4
@@ -45,14 +67,14 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Instalar FFmpeg e dependências
+      - name: Instalar motor de vídeo e voz
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Baixar voz pt-BR
+      - name: Preparar voz de emergência
         run: |
           mkdir -p models
           curl -L --fail --retry 3 \
@@ -62,15 +84,18 @@ jobs:
             -o models/pt_BR-faber-medium.onnx.json \
             https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx.json
 
-      - name: Gerar vídeo
+      - name: Renderizar cena por cena
         env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           INPUT_TOPIC: ${{ inputs.topic }}
+          INPUT_PLAN_JSON: ${{ inputs.plan_json }}
           INPUT_DURATION: ${{ inputs.duration }}
-          INPUT_STYLE: ${{ inputs.style }}
-        run: |
-          python scripts/generate_short.py "$INPUT_TOPIC" "$INPUT_DURATION" "$INPUT_STYLE"
+          INPUT_TONE: ${{ inputs.tone }}
+          INPUT_VISUAL_STYLE: ${{ inputs.visual_style }}
+          INPUT_MEDIA_MODE: ${{ inputs.media_mode }}
+          INPUT_VOICE: ${{ inputs.voice }}
+          INPUT_CAPTIONS: ${{ inputs.captions }}
+        run: python scripts/generate_short.py
 
       - name: Guardar artefato por 2 dias
         uses: actions/upload-artifact@v4
@@ -93,4 +118,4 @@ jobs:
           )
           gh release create "short-${GITHUB_RUN_ID}" output/final.mp4 output/metadata.json \
             --title "$TITLE" \
-            --notes "Vídeo gerado automaticamente pelo Shorts Cloud."
+            --notes "Vídeo gerado pelo Shorts Cloud Studio v0.2."

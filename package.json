@@ -1,0 +1,12 @@
+{
+  "name": "shorts-cloud-starter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gerador cloud de Shorts de 60-70s com Groq, Pexels, Piper e GitHub Actions",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -12,6 +12,8 @@ on:
       cartoon_style: { description: Estilo do desenho, required: true, default: classic-2d, type: string }
       media_mode: { description: Mídia, required: true, default: hybrid, type: string }
       voice: { description: Voz, required: true, default: pt-BR-AntonioNeural, type: string }
+      voice_pitch: { description: Tom da voz, required: true, default: default, type: string }
+      voice_speed: { description: Velocidade da voz, required: true, default: default, type: string }
       captions: { description: Legendas, required: true, default: "on", type: string }
       caption_font: { description: Fonte, required: true, default: "Montserrat", type: string }
       caption_size: { description: Tamanho da fonte, required: true, default: "38", type: string }
@@ -51,7 +53,8 @@ jobs:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           PIPER_MODEL_PATH: models/pt_BR-faber-medium.onnx
           INPUT_VOICE: ${{ inputs.voice }}
-          EDGE_TTS_RATE: "-5%"
+          INPUT_VOICE_PITCH: ${{ inputs.voice_pitch }}
+          INPUT_VOICE_SPEED: ${{ inputs.voice_speed }}
           INPUT_TOPIC: ${{ inputs.topic }}
           INPUT_PLAN_JSON: ${{ inputs.plan_json }}
           INPUT_DURATION: ${{ inputs.duration }}
@@ -84,4 +87,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TITLE=$(python -c "import json; print(json.load(open('output/metadata.json',encoding='utf-8')).get('title','Short Cloud Studio'))")
-          gh release create "short-${GITHUB_RUN_ID}" output/final.mp4 output/metadata.json --title "$TITLE" --notes "Short Cloud Studio — vídeo gerado conforme as escolhas do editor."
+          gh release create "short-${GITHUB_RUN_ID}" output/final.mp4 output/metadata.json --title "$TITLE" --notes "Vídeo gerado conforme as escolhas do editor."

@@ -8,7 +8,7 @@
   function syncCaptionPreview(){const size=Number(document.getElementById('captionSize')?.value||56),c=document.getElementById('previewCaption');if(c)c.style.fontSize=`${Math.max(10,Math.round(size*.22))}px`;}
   function configureCaptionSizes(){const select=document.getElementById('captionSize');if(!select||select.dataset.recalibrated)return;select.dataset.recalibrated='1';select.innerHTML='<option value="42">Pequena</option><option value="56" selected>Média</option><option value="70">Grande</option><option value="84">Extra grande</option>';select.value='56';select.addEventListener('change',()=>setTimeout(syncCaptionPreview,0));setTimeout(()=>{select.dispatchEvent(new Event('change',{bubbles:true}));syncCaptionPreview()},0);}
   function loadScript(src,key){if(document.querySelector(`script[data-${key}]`))return;const s=document.createElement('script');s.src=src;s.dataset[key]='1';document.head.appendChild(s);}
-  function run(){sanitizeNode(document.body);configureCaptionSizes();loadScript('/generation-control.js','generationControls');loadScript('/request-resilience.js','requestResilience');syncCaptionPreview()}
+  function run(){sanitizeNode(document.body);configureCaptionSizes();loadScript('/generation-control.js','generationControls');loadScript('/request-resilience.js','requestResilience');loadScript('/mobile.js','mobileEnhancements');syncCaptionPreview()}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
   new MutationObserver(muts=>{for(const m of muts){if(m.type==='characterData')sanitizeNode(m.target);m.addedNodes.forEach(sanitizeNode)}}).observe(document.documentElement,{subtree:true,childList:true,characterData:true});
 })();

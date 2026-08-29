@@ -1,7 +1,7 @@
 (()=>{
   const replacements=[
-    [/\bGitHub\b/gi,'serviço interno'],
     [/\bGitHub Actions\b/gi,'processamento interno'],
+    [/\bGitHub\b/gi,'serviço interno'],
     [/\bActions\b/gi,'processamento'],
     [/\bVercel\b/gi,'plataforma'],
     [/\bPexels\b/gi,'biblioteca de mídia'],
@@ -10,7 +10,7 @@
     [/\brelease\b/gi,'publicação'],
     [/\breposit[oó]rio\b/gi,'projeto'],
     [/\bworkflow\b/gi,'processo'],
-    [/\brenderiza(?:r|ção|do|ndo)\b/gi,'gera$&'.replace('$&','')],
+    [/\brenderiza(?:r|ção|do|ndo)\b/gi,'geração'],
     [/\brender(?:s)?\b/gi,'gerações'],
     [/\bMP4\b/g,'vídeo']
   ];
@@ -32,15 +32,18 @@
     for(const [rx,value] of stageMap) out=out.replace(rx,value);
     for(const [rx,value] of replacements) out=out.replace(rx,value);
     out=out
-      .replace(/Escolha conteúdo, visual, mídia, voz e legenda antes de gerar\.?/i,'Escolha conteúdo, visual, mídia, voz e legenda antes de criar seu vídeo.')
-      .replace(/Vídeos hoje/i,'Criações hoje')
-      .replace(/Você ainda não gastou uma? gerações?\.?/i,'Você ainda não iniciou a geração.')
-      .replace(/Pronto para gerar\??/i,'Pronto para criar seu vídeo?')
-      .replace(/Nenhuma? gerações? ainda\.?/i,'Nenhum vídeo criado ainda.')
+      .replace(/Escolha conteúdo, visual, mídia, voz e legenda antes de geração\.?/i,'Escolha conteúdo, visual, mídia, voz e legenda antes de criar seu vídeo.')
+      .replace(/Renders hoje/gi,'Criações hoje')
+      .replace(/Você ainda não gastou (?:um|uma) gerações?\.?/i,'Você ainda não iniciou a geração.')
+      .replace(/Pronto para geração\??/i,'Pronto para criar seu vídeo?')
+      .replace(/Nenhum(?:a)? gerações? ainda\.?/i,'Nenhum vídeo criado ainda.')
       .replace(/Enviando vídeo para geração…?/i,'Preparando seu vídeo…')
       .replace(/Geração iniciado/i,'Geração iniciada')
       .replace(/o sistema busca fotos e\/ou vídeos da biblioteca de mídia de acordo com cada cena\.?/i,'o sistema seleciona fotos e/ou vídeos de acordo com cada cena.')
-      .replace(/Falha no status/gi,'Não foi possível atualizar agora');
+      .replace(/Falha no status/gi,'Não foi possível atualizar agora')
+      .replace(/HTTP\s*\d{3}[^.\n]*/gi,'Não foi possível concluir esta etapa')
+      .replace(/API[_ -]?KEY/gi,'configuração interna')
+      .replace(/token/gi,'acesso');
     return out;
   }
 

@@ -1,164 +1,78 @@
 name: Generate Short
-run-name: "Short — ${{ inputs.topic }}"
-
+run-name: "Turbo v2 — ${{ inputs.topic }}"
 on:
   workflow_dispatch:
     inputs:
-      topic:
-        description: Tema do vídeo
-        required: true
-        type: string
-      plan_json:
-        description: Plano aprovado em JSON
-        required: true
-        type: string
-      duration:
-        description: Duração alvo (60-70)
-        required: true
-        default: "65"
-        type: string
-      tone:
-        description: Tom narrativo
-        required: true
-        default: cinematic
-        type: string
-      niche_key:
-        description: Nicho visual
-        required: true
-        default: custom
-        type: string
-      visual_style:
-        description: realistic ou cartoon
-        required: true
-        default: realistic
-        type: string
-      cartoon_style:
-        description: Estilo próprio de ilustração
-        required: true
-        default: classic-2d
-        type: string
-      media_mode:
-        description: photos, videos ou hybrid
-        required: true
-        default: photos
-        type: string
-      voice:
-        description: Voz Kokoro pt-BR
-        required: true
-        default: pm_alex
-        type: string
-      captions:
-        description: on ou off
-        required: true
-        default: "on"
-        type: string
-      music:
-        description: Trilha original ou off
-        required: true
-        default: "off"
-        type: string
-      music_volume:
-        description: low, medium ou high
-        required: true
-        default: medium
-        type: string
-      request_id:
-        description: Identificador da solicitação
-        required: false
-        type: string
-
+      topic: { description: Tema do vídeo, required: true, type: string }
+      plan_json: { description: Plano aprovado em JSON, required: true, type: string }
+      duration: { description: Duração alvo, required: true, default: "65", type: string }
+      tone: { description: Tom, required: true, default: cinematic, type: string }
+      niche_key: { description: Nicho, required: true, default: custom, type: string }
+      visual_style: { description: Modo visual, required: true, default: cartoon, type: string }
+      cartoon_style: { description: Estilo do desenho, required: true, default: classic-2d, type: string }
+      media_mode: { description: Mídia, required: true, default: photos, type: string }
+      voice: { description: Voz, required: true, default: piper-pt-br, type: string }
+      captions: { description: Legendas, required: true, default: "on", type: string }
+      music: { description: Trilha, required: true, default: "off", type: string }
+      music_volume: { description: Volume, required: true, default: medium, type: string }
+      request_id: { description: ID, required: false, type: string }
 permissions:
   contents: write
-
-env:
-  PIPER_MODEL_PATH: models/pt_BR-faber-medium.onnx
-  KOKORO_MODEL_PATH: models/kokoro/kokoro-v1.0.onnx
-  KOKORO_VOICES_PATH: models/kokoro/voices-v1.0.bin
-
 jobs:
   render:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - name: Baixar projeto
+      - name: Baixar Turbo v2
         uses: actions/checkout@v4
-
-      - name: Python
+        with:
+          ref: turbo-v2
+      - name: Preparar Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
-
-      - name: Instalar motor de vídeo e voz
+      - name: Instalar motor Turbo
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core espeak-ng libsndfile1
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Cache do Kokoro
-        uses: actions/cache@v4
-        with:
-          path: models/kokoro
-          key: kokoro-v1.0-model
-
-      - name: Preparar Kokoro e voz de emergência
+          pip install requests==2.32.5 piper-tts==1.7.0 soundfile==0.13.1 Pillow==11.3.0 numpy==2.2.6
+      - name: Preparar voz brasileira
         run: |
-          mkdir -p models/kokoro models
-          if [ ! -f models/kokoro/kokoro-v1.0.onnx ]; then
-            curl -L --fail --retry 3 \
-              -o models/kokoro/kokoro-v1.0.onnx \
-              https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
-          fi
-          if [ ! -f models/kokoro/voices-v1.0.bin ]; then
-            curl -L --fail --retry 3 \
-              -o models/kokoro/voices-v1.0.bin \
-              https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
-          fi
-          curl -L --fail --retry 3 \
-            -o models/pt_BR-faber-medium.onnx \
-            https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx
-          curl -L --fail --retry 3 \
-            -o models/pt_BR-faber-medium.onnx.json \
-            https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx.json
-
-      - name: Renderizar cena por cena
+          mkdir -p models
+          curl -L --fail --retry 3 -o models/pt_BR-faber-medium.onnx https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx
+          curl -L --fail --retry 3 -o models/pt_BR-faber-medium.onnx.json https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx.json
+      - name: Gerar ilustrações Cartoon
         env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          PIPER_MODEL_PATH: models/pt_BR-faber-medium.onnx
           INPUT_TOPIC: ${{ inputs.topic }}
           INPUT_PLAN_JSON: ${{ inputs.plan_json }}
           INPUT_DURATION: ${{ inputs.duration }}
           INPUT_TONE: ${{ inputs.tone }}
           INPUT_NICHE_KEY: ${{ inputs.niche_key }}
-          INPUT_VISUAL_STYLE: ${{ inputs.visual_style }}
+          INPUT_VISUAL_STYLE: cartoon
           INPUT_CARTOON_STYLE: ${{ inputs.cartoon_style }}
-          INPUT_MEDIA_MODE: ${{ inputs.media_mode }}
-          INPUT_VOICE: ${{ inputs.voice }}
           INPUT_CAPTIONS: ${{ inputs.captions }}
           INPUT_MUSIC: ${{ inputs.music }}
           INPUT_MUSIC_VOLUME: ${{ inputs.music_volume }}
-        run: python scripts/generate_short.py
-
-      - name: Guardar artefato por 2 dias
+        run: python scripts/generate_turbo.py
+      - name: Validar MP4
+        run: |
+          test -s output/final.mp4
+          ffprobe -v error -show_entries format=duration,size -of json output/final.mp4
+      - name: Guardar vídeo
         uses: actions/upload-artifact@v4
         with:
-          name: short-${{ github.run_id }}
+          name: turbo-v2-${{ github.run_id }}
           path: |
             output/final.mp4
             output/metadata.json
           retention-days: 2
           compression-level: 0
-
-      - name: Publicar MP4 em Release
+      - name: Publicar MP4
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TITLE=$(python - <<'PY'
-          import json
-          print(json.load(open('output/metadata.json', encoding='utf-8')).get('title','Short gerado'))
-          PY
-          )
-          gh release create "short-${GITHUB_RUN_ID}" output/final.mp4 output/metadata.json \
-            --title "$TITLE" \
-            --notes "Vídeo gerado pelo Shorts Cloud Studio."
+          TITLE=$(python -c "import json; print(json.load(open('output/metadata.json',encoding='utf-8')).get('title','Turbo v2'))")
+          gh release create "short-${GITHUB_RUN_ID}" output/final.mp4 output/metadata.json --title "$TITLE" --notes "Shorts Cloud Studio Turbo v2 — render Cartoon isolado."

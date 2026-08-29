@@ -13,7 +13,7 @@ on:
       media_mode: { description: Mídia, required: true, default: hybrid, type: string }
       voice: { description: Voz, required: true, default: pt-BR-AntonioNeural, type: string }
       captions: { description: Legendas, required: true, default: "on", type: string }
-      caption_font: { description: Fonte, required: true, default: "DejaVu Sans", type: string }
+      caption_font: { description: Fonte, required: true, default: "Montserrat", type: string }
       caption_size: { description: Tamanho da fonte, required: true, default: "38", type: string }
       music: { description: Trilha, required: true, default: "off", type: string }
       music_volume: { description: Volume, required: true, default: medium, type: string }
@@ -37,7 +37,8 @@ jobs:
       - name: Instalar motor de vídeo
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg fonts-dejavu-core fonts-liberation fonts-montserrat espeak-ng libsndfile1
+          sudo apt-get install -y ffmpeg fonts-dejavu-core fonts-liberation fonts-montserrat fonts-lato fonts-noto-core fonts-roboto espeak-ng libsndfile1
+          fc-cache -f -v
           python -m pip install --upgrade pip
           pip install requests==2.32.5 piper-tts==1.7.0 edge-tts==7.2.3 soundfile==0.13.1 Pillow==11.3.0 numpy==2.2.6
       - name: Preparar voz brasileira

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json, math, os, subprocess, textwrap, hashlib
+import json, math, os, subprocess, hashlib
 from pathlib import Path
 from urllib.parse import quote
 
@@ -56,15 +56,12 @@ def procedural_scene(scene, path, style, niche, idx):
     c0,c1,c2,c3 = palette(style,niche)
     im = Image.new("RGB", (W,H), c0)
     d = ImageDraw.Draw(im)
-    # sky bands / graphic layers
     d.rectangle((0,0,W,760), fill=c0)
     d.ellipse((710,120,980,390), fill=c1)
     d.polygon([(0,760),(260,520),(510,760),(760,440),(1080,760),(1080,1260),(0,1260)], fill=c2)
     d.polygon([(0,1120),(260,880),(520,1110),(780,850),(1080,1080),(1080,H),(0,H)], fill=c1)
     d.rectangle((0,1370,W,H), fill=c0)
-
     text = (str(scene.get("visual_description", "")) + " " + str(scene.get("narration", ""))).lower()
-    # simple cartoon figures; sizes adapt to keywords
     giant = any(k in text for k in ["golias","gigante","giant"])
     people = 2 if any(k in text for k in ["davi","golias","homem","mulher","rei","soldado","personagem","warrior"]) else 1
     if any(k in text for k in ["exército","army","multidão","soldados"]): people = 5
@@ -81,17 +78,14 @@ def procedural_scene(scene, path, style, niche, idx):
         d.line((x+body_w,y+head_r*3,x+220,ground-120), fill=(20,20,24), width=18)
         d.line((x-45,ground,x-85,ground+160), fill=(20,20,24), width=22)
         d.line((x+45,ground,x+85,ground+160), fill=(20,20,24), width=22)
-    if any(k in text for k in ["funda","sling"]):
-        d.arc((130,880,460,1210),20,250,fill=(24,20,18),width=18)
-    if any(k in text for k in ["espada","sword"]):
-        d.line((830,930,980,620), fill=(230,230,235), width=22)
+    if any(k in text for k in ["funda","sling"]): d.arc((130,880,460,1210),20,250,fill=(24,20,18),width=18)
+    if any(k in text for k in ["espada","sword"]): d.line((830,930,980,620), fill=(230,230,235), width=22)
     if any(k in text for k in ["estrela","space","espaço","planet","planeta"]):
         for s in range(35):
             x=(s*97+idx*53)%W; y=(s*151+idx*79)%720
             d.ellipse((x,y,x+6,y+6), fill=(245,245,230))
-    # caption-like scene label embedded subtly in illustration, not the narration
     beat = str(scene.get("beat") or f"Cena {idx+1}")[:36]
-    d.rounded_rectangle((70,85,760,190), radius=34, fill=(0,0,0,120) if im.mode=="RGBA" else (20,20,24))
+    d.rounded_rectangle((70,85,760,190), radius=34, fill=(20,20,24))
     d.text((105,112), beat, font=font(42), fill=(255,255,255))
     im = im.filter(ImageFilter.SMOOTH_MORE)
     im.save(path, quality=94)
@@ -130,9 +124,21 @@ def ai_cartoon_scene(scene, path, style, niche, idx):
 
 def synthesize(text, idx):
     wav = WORK / f"voice_{idx:02d}.wav"
-    run(["piper","--model",PIPER_MODEL,"--output_file",str(wav)], stdin=text.encode("utf-8"))
-    if not wav.exists() or duration(wav) < .3: raise RuntimeError("Piper não gerou áudio válido")
-    return wav
+    mp3 = WORK / f"voice_{idx:02d}.mp3"
+    voice = os.getenv("INPUT_VOICE", "pt-BR-AntonioNeural")
+    rate = os.getenv("EDGE_TTS_RATE", "-5%")
+    try:
+        run(["edge-tts", "--voice", voice, f"--rate={rate}", "--text", text, "--write-media", str(mp3)])
+        if not mp3.exists() or mp3.stat().st_size < 1000: raise RuntimeError("Edge TTS não gerou mídia válida")
+        run(["ffmpeg","-y","-i",str(mp3),"-ar","48000","-ac","1","-c:a","pcm_s16le",str(wav)])
+        if not wav.exists() or duration(wav) < .3: raise RuntimeError("Edge TTS gerou áudio inválido")
+        print(f"Cena {idx+1}: voz natural pt-BR {voice}.", flush=True)
+        return wav, "edge-tts"
+    except Exception as exc:
+        print(f"Cena {idx+1}: Edge TTS indisponível ({exc}); usando Piper apenas como fallback.", flush=True)
+        run(["piper","--model",PIPER_MODEL,"--output_file",str(wav)], stdin=text.encode("utf-8"))
+        if not wav.exists() or duration(wav) < .3: raise RuntimeError("Nenhum mecanismo de voz gerou áudio válido")
+        return wav, "piper-fallback"
 
 
 def render_image(img, out, seconds, idx):
@@ -194,13 +200,14 @@ def main():
     niche=os.getenv("INPUT_NICHE_KEY","custom")
     captions=os.getenv("INPUT_CAPTIONS","on")
     music=os.getenv("INPUT_MUSIC","off")
+    selected_voice=os.getenv("INPUT_VOICE","pt-BR-AntonioNeural")
     volume={"low":"0.08","medium":"0.13","high":"0.18"}.get(os.getenv("INPUT_MUSIC_VOLUME","medium"),"0.13")
 
-    voices=[]; clips=[]; durations=[]; visual_sources=[]
+    voices=[]; clips=[]; durations=[]; visual_sources=[]; voice_sources=[]
     for i,scene in enumerate(scenes):
         text=str(scene.get("narration") or "").strip()
         if not text: raise RuntimeError(f"cena {i+1} sem narração")
-        wav=synthesize(text,i); dur=duration(wav); voices.append(wav); durations.append(dur)
+        wav,voice_source=synthesize(text,i); dur=duration(wav); voices.append(wav); durations.append(dur); voice_sources.append(voice_source)
         img=WORK/f"cartoon_{i:02d}.jpg"
         source=ai_cartoon_scene(scene,img,style,niche,i); visual_sources.append(source)
         clip=WORK/f"scene_{i:02d}.mp4"; render_image(img,clip,dur,i); clips.append(clip)
@@ -219,7 +226,17 @@ def main():
     else:
         run(["ffmpeg","-y","-i",str(video),"-i",str(narration),*vf,"-map","0:v","-map","1:a","-c:v","libx264","-preset","veryfast","-crf","22","-c:a","aac","-b:a","192k","-shortest",str(final)])
 
-    meta={"title":plan.get("title") or os.getenv("INPUT_TOPIC","Short Turbo"),"summary":plan.get("summary","") ,"visual_mode":"100% cartoon","cartoon_style":style,"scene_sources":visual_sources,"duration_seconds":round(duration(final),2),"engine":"Shorts Cloud Studio Turbo v2 / MPT-inspired pipeline"}
+    meta={
+        "title":plan.get("title") or os.getenv("INPUT_TOPIC","Short Turbo"),
+        "summary":plan.get("summary",""),
+        "visual_mode":"100% cartoon",
+        "cartoon_style":style,
+        "scene_sources":visual_sources,
+        "voice":selected_voice,
+        "voice_engine":"edge-tts" if all(v=="edge-tts" for v in voice_sources) else "edge-tts-with-piper-fallback",
+        "duration_seconds":round(duration(final),2),
+        "engine":"Shorts Cloud Studio Turbo v2 / MPT-inspired pipeline"
+    }
     (OUT/"metadata.json").write_text(json.dumps(meta,ensure_ascii=False,indent=2),encoding="utf-8")
     if not final.exists() or final.stat().st_size<500000: raise RuntimeError("MP4 final inválido")
     print(json.dumps(meta,ensure_ascii=False),flush=True)

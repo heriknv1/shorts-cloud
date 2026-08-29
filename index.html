@@ -10,21 +10,25 @@
 <body>
   <main class="shell">
     <section class="hero">
-      <span class="pill">3 renders por dia • cloud</span>
+      <span class="pill">10 renders por dia • cloud</span>
       <h1>Shorts Cloud Studio</h1>
       <p>Escolha um nicho pronto ou personalize tudo. Revise o plano e só depois mande renderizar.</p>
     </section>
 
     <section class="top-grid">
-      <article class="card compact">
-        <span class="eyebrow">Acesso</span>
-        <div class="row">
-          <input id="pin" type="password" placeholder="PIN do aplicativo" autocomplete="current-password" />
-          <button class="secondary" id="savePinBtn">Entrar</button>
+      <article class="card compact session-card">
+        <div>
+          <span class="eyebrow">Sessão protegida</span>
+          <strong id="sessionUser">Conectado</strong>
+        </div>
+        <button class="ghost" type="button" onclick="shortsCloudLogout()">Sair</button>
+        <div hidden>
+          <input id="pin" value="session-authenticated" />
+          <button id="savePinBtn" type="button">Entrar</button>
         </div>
       </article>
       <article class="card compact quota-card">
-        <div><span class="eyebrow">Cota de render hoje</span><strong id="quotaText">informe o PIN</strong></div>
+        <div><span class="eyebrow">Cota de render hoje</span><strong id="quotaText">carregando…</strong></div>
         <button class="ghost" id="refreshBtn">Atualizar</button>
       </article>
     </section>
@@ -133,6 +137,7 @@
       <div id="runs" class="runs"><p class="muted">Nenhuma informação ainda.</p></div>
     </section>
   </main>
+  <script src="/auth-ui.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

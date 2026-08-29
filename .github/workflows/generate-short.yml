@@ -22,10 +22,20 @@ on:
         required: true
         default: cinematic
         type: string
+      niche_key:
+        description: Nicho visual
+        required: true
+        default: custom
+        type: string
       visual_style:
         description: realistic ou cartoon
         required: true
         default: realistic
+        type: string
+      cartoon_style:
+        description: Estilo próprio de ilustração
+        required: true
+        default: classic-2d
         type: string
       media_mode:
         description: photos, videos ou hybrid
@@ -41,6 +51,16 @@ on:
         description: on ou off
         required: true
         default: "on"
+        type: string
+      music:
+        description: Trilha original ou off
+        required: true
+        default: "off"
+        type: string
+      music_volume:
+        description: low, medium ou high
+        required: true
+        default: medium
         type: string
       request_id:
         description: Identificador da solicitação
@@ -110,10 +130,14 @@ jobs:
           INPUT_PLAN_JSON: ${{ inputs.plan_json }}
           INPUT_DURATION: ${{ inputs.duration }}
           INPUT_TONE: ${{ inputs.tone }}
+          INPUT_NICHE_KEY: ${{ inputs.niche_key }}
           INPUT_VISUAL_STYLE: ${{ inputs.visual_style }}
+          INPUT_CARTOON_STYLE: ${{ inputs.cartoon_style }}
           INPUT_MEDIA_MODE: ${{ inputs.media_mode }}
           INPUT_VOICE: ${{ inputs.voice }}
           INPUT_CAPTIONS: ${{ inputs.captions }}
+          INPUT_MUSIC: ${{ inputs.music }}
+          INPUT_MUSIC_VOLUME: ${{ inputs.music_volume }}
         run: python scripts/generate_short.py
 
       - name: Guardar artefato por 2 dias
@@ -137,4 +161,4 @@ jobs:
           )
           gh release create "short-${GITHUB_RUN_ID}" output/final.mp4 output/metadata.json \
             --title "$TITLE" \
-            --notes "Vídeo gerado pelo Shorts Cloud Studio v0.2."
+            --notes "Vídeo gerado pelo Shorts Cloud Studio."

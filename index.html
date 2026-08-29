@@ -34,10 +34,8 @@
         <div><span class="eyebrow">1. Ideia</span><h2>O que vamos contar?</h2></div>
         <span class="step-note">Criar o plano não consome render.</span>
       </div>
-
       <label for="topic">Tema do vídeo</label>
       <textarea id="topic" rows="3" placeholder="Ex.: Davi e Golias — conte a história de forma fiel, emocionante e fácil de acompanhar"></textarea>
-
       <div class="idea-row">
         <input id="niche" placeholder="Nicho para receber 3 sugestões, ex.: histórias bíblicas" maxlength="160" />
         <button id="ideasBtn" class="secondary">Sugerir 3 ideias</button>
@@ -48,63 +46,25 @@
     <section class="card">
       <div class="section-head"><div><span class="eyebrow">2. Direção</span><h2>Escolha como o vídeo deve parecer</h2></div></div>
       <div class="grid3">
-        <div>
-          <label>Duração</label>
-          <select id="duration">
-            <option value="60">60 segundos</option>
-            <option value="65" selected>65 segundos</option>
-            <option value="70">70 segundos</option>
-          </select>
-        </div>
-        <div>
-          <label>Tom da história</label>
-          <select id="tone">
-            <option value="cinematic">Cinematográfico e emocional</option>
-            <option value="documentary">Documental e intrigante</option>
-            <option value="dramatic">Dramático e misterioso</option>
-            <option value="energetic">Rápido e energético</option>
-          </select>
-        </div>
-        <div>
-          <label>Estilo visual</label>
-          <select id="visualStyle">
-            <option value="realistic">Imagens reais</option>
-            <option value="cartoon">Desenho / ilustração</option>
-          </select>
-        </div>
-        <div>
-          <label>Tipo de mídia</label>
-          <select id="mediaMode">
-            <option value="photos" selected>Fotos com movimento</option>
-            <option value="hybrid">Híbrido — foto + vídeo</option>
-            <option value="videos">Vídeos reais</option>
-          </select>
-        </div>
+        <div><label>Duração</label><select id="duration"><option value="60">60 segundos</option><option value="65" selected>65 segundos</option><option value="70">70 segundos</option></select></div>
+        <div><label>Tom da história</label><select id="tone"><option value="cinematic">Cinematográfico e emocional</option><option value="documentary">Documental e intrigante</option><option value="dramatic">Dramático e misterioso</option><option value="energetic">Rápido e energético</option></select></div>
+        <div><label>Estilo visual</label><select id="visualStyle"><option value="realistic">Imagens reais</option><option value="cartoon">Desenho / ilustração</option></select></div>
+        <div><label>Tipo de mídia</label><select id="mediaMode"><option value="photos" selected>Fotos com movimento</option><option value="hybrid">Híbrido — foto + vídeo</option><option value="videos">Vídeos reais</option></select></div>
         <div>
           <label>Voz</label>
           <select id="voice">
-            <optgroup label="Masculinas">
-              <option value="pt-BR-AntonioNeural">Antônio — natural</option>
-              <option value="pt-BR-DonatoNeural">Donato — firme</option>
-              <option value="pt-BR-FabioNeural">Fábio — suave</option>
-              <option value="pt-BR-NicolauNeural">Nicolau — narrador</option>
+            <optgroup label="Masculinas — Kokoro pt-BR">
+              <option value="pm_alex" selected>Alex — natural</option>
+              <option value="pm_santa">Santa — mais grave</option>
             </optgroup>
-            <optgroup label="Femininas">
-              <option value="pt-BR-FranciscaNeural">Francisca — natural</option>
-              <option value="pt-BR-ThalitaNeural">Thalita — clara</option>
-              <option value="pt-BR-ManuelaNeural">Manuela — suave</option>
-              <option value="pt-BR-YaraNeural">Yara — expressiva</option>
+            <optgroup label="Femininas — Kokoro pt-BR">
+              <option value="pf_dora">Dora — natural</option>
             </optgroup>
           </select>
         </div>
-        <div>
-          <label>Legendas</label>
-          <select id="captions">
-            <option value="on" selected>Ativadas — discretas no rodapé</option>
-            <option value="off">Sem legenda</option>
-          </select>
-        </div>
+        <div><label>Legendas</label><select id="captions"><option value="on" selected>Ativadas — discretas no rodapé</option><option value="off">Sem legenda</option></select></div>
       </div>
+      <div class="notice">As vozes principais usam Kokoro local no GitHub Actions. O modelo é open-source; se ele falhar, o sistema usa a voz simples de emergência.</div>
       <div id="cartoonNotice" class="notice" hidden>No modo desenho, o sistema usa fotos adequadas e aplica uma estilização ilustrada localmente. Não depende de créditos de geração de imagem.</div>
     </section>
 
@@ -119,11 +79,7 @@
     </section>
 
     <section class="card action-card">
-      <div>
-        <span class="eyebrow">4. Plano seguro</span>
-        <h2>Revise antes de renderizar</h2>
-        <p class="muted">Primeiro geramos somente roteiro + cenas. Só o botão de render final entra na sua cota de 3 vídeos.</p>
-      </div>
+      <div><span class="eyebrow">4. Plano seguro</span><h2>Revise antes de renderizar</h2><p class="muted">Primeiro geramos somente roteiro + cenas. Só o botão de render final entra na sua cota de 3 vídeos.</p></div>
       <button id="planBtn" class="primary">Criar plano do vídeo</button>
       <div id="message" class="message" hidden></div>
     </section>
@@ -132,10 +88,7 @@
       <div class="section-head"><div><span class="eyebrow">5. Revisão</span><h2 id="planTitle">Plano do vídeo</h2></div><span class="badge ok">Não renderizado</span></div>
       <p id="planSummary" class="summary"></p>
       <div id="sceneEditor" class="scene-list"></div>
-      <div class="approval-bar">
-        <div><strong>Confira principalmente a fala e o que deve aparecer.</strong><span>Você pode editar qualquer cena antes de renderizar.</span></div>
-        <button id="generateBtn" class="primary small-primary">Aprovar e gerar MP4</button>
-      </div>
+      <div class="approval-bar"><div><strong>Confira principalmente a fala e o que deve aparecer.</strong><span>Você pode editar qualquer cena antes de renderizar.</span></div><button id="generateBtn" class="primary small-primary">Aprovar e gerar MP4</button></div>
     </section>
 
     <section class="card">

@@ -1,9 +1,11 @@
 const { gh, config, usedToday } = require('../lib/github');
-const { requirePin } = require('../lib/auth');
+const { requireAuth } = require('../lib/auth');
+
+const DAILY_LIMIT = 10;
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST.' });
-  if (!requirePin(req, res)) return;
+  if (!requireAuth(req, res)) return;
   try {
     const { repo } = config();
     const topic = String(req.body?.topic || '').trim();
@@ -47,7 +49,7 @@ module.exports = async function handler(req, res) {
     if (planJson.length > 52000) return res.status(400).json({ error: 'O plano ficou grande demais. Reduza os textos das cenas.' });
 
     const used = await usedToday();
-    if (used >= 3) return res.status(429).json({ error: 'O limite configurado de 3 renders de hoje já foi usado.', usedToday: used, remaining: 0 });
+    if (used >= DAILY_LIMIT) return res.status(429).json({ error: `O limite configurado de ${DAILY_LIMIT} renders de hoje já foi usado.`, usedToday: used, remaining: 0 });
 
     const requestId = `${Date.now()}-1`;
     await gh(`/repos/${repo}/actions/workflows/generate-short.yml/dispatches`, {
@@ -71,7 +73,7 @@ module.exports = async function handler(req, res) {
         }
       })
     });
-    return res.status(202).json({ ok: true, requestId, usedToday: used + 1, remaining: 2 - used });
+    return res.status(202).json({ ok: true, requestId, usedToday: used + 1, dailyLimit: DAILY_LIMIT, remaining: DAILY_LIMIT - used - 1 });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: error.message || 'Falha ao iniciar geração.' });

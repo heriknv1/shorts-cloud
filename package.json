@@ -1,8 +1,8 @@
 {
-  "name": "shorts-cloud-starter",
-  "version": "0.1.0",
+  "name": "shorts-cloud-studio",
+  "version": "0.2.0",
   "private": true,
-  "description": "Gerador cloud de Shorts de 60-70s com Groq, Pexels, Piper e GitHub Actions",
+  "description": "Studio cloud de Shorts com planejamento por cenas, Groq Vision, Pexels, voz neural e GitHub Actions",
   "scripts": {
     "dev": "vercel dev"
   },

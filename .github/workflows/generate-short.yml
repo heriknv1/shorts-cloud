@@ -1,5 +1,5 @@
 name: Generate Short
-run-name: "Turbo v2 — ${{ inputs.topic }}"
+run-name: "Short Cloud Studio — ${{ inputs.topic }}"
 on:
   workflow_dispatch:
     inputs:
@@ -26,7 +26,7 @@ jobs:
       - name: Baixar Turbo v2
         uses: actions/checkout@v4
         with:
-          ref: turbo-v2
+          ref: main
       - name: Preparar Python
         uses: actions/setup-python@v5
         with:
@@ -66,7 +66,7 @@ jobs:
       - name: Guardar vídeo
         uses: actions/upload-artifact@v4
         with:
-          name: turbo-v2-${{ github.run_id }}
+          name: short-cloud-${{ github.run_id }}
           path: |
             output/final.mp4
             output/metadata.json
@@ -76,5 +76,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TITLE=$(python -c "import json; print(json.load(open('output/metadata.json',encoding='utf-8')).get('title','Turbo v2'))")
-          gh release create "short-${GITHUB_RUN_ID}" output/final.mp4 output/metadata.json --title "$TITLE" --notes "Shorts Cloud Studio Turbo v2 — render Cartoon isolado."
+          TITLE=$(python -c "import json; print(json.load(open('output/metadata.json',encoding='utf-8')).get('title','Short Cloud Studio'))")
+          gh release create "short-${GITHUB_RUN_ID}" output/final.mp4 output/metadata.json --title "$TITLE" --notes "Short Cloud Studio — vídeo gerado em Cartoon."

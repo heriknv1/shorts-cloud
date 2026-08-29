@@ -32,6 +32,18 @@
     el.textContent = text;
   }
 
+  function keepQuotaLabelCorrect() {
+    const quota = document.getElementById('quotaText');
+    if (!quota) return;
+    const normalize = () => {
+      const current = quota.textContent || '';
+      const fixed = current.replace(/\/(?:3|5) usados/g, '/10 usados');
+      if (fixed !== current) quota.textContent = fixed;
+    };
+    normalize();
+    new MutationObserver(normalize).observe(quota, { childList: true, characterData: true, subtree: true });
+  }
+
   async function login(event) {
     event.preventDefault();
     const username = document.getElementById('loginUsername').value.trim();
@@ -60,6 +72,7 @@
   async function bootstrap() {
     const overlay = ensureOverlay();
     document.getElementById('loginForm').addEventListener('submit', login);
+    keepQuotaLabelCorrect();
     try {
       const response = await fetch('/api/session', { cache: 'no-store', credentials: 'same-origin' });
       if (!response.ok) throw new Error('not-authenticated');

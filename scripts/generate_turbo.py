@@ -18,18 +18,33 @@ def run(cmd,stdin=None):
 def duration(path):
     p=subprocess.run(['ffprobe','-v','error','-show_entries','format=duration','-of','default=noprint_wrappers=1:nokey=1',str(path)],capture_output=True,text=True,check=True); return float(p.stdout.strip())
 
+def voice_settings():
+    pitch_mode=os.getenv('INPUT_VOICE_PITCH','default'); speed_mode=os.getenv('INPUT_VOICE_SPEED','default')
+    pitch={'low':'-18Hz','default':'+0Hz','high':'+18Hz'}.get(pitch_mode,'+0Hz')
+    rate={'slow':'-14%','default':'-5%','fast':'+10%'}.get(speed_mode,'-5%')
+    return pitch_mode,speed_mode,pitch,rate
+
+def postprocess_fallback_voice(src,dst):
+    pitch_mode,speed_mode,_,_=voice_settings(); tempo={'slow':0.88,'default':1.0,'fast':1.12}.get(speed_mode,1.0); ratio={'low':0.92,'default':1.0,'high':1.08}.get(pitch_mode,1.0)
+    filters=[]
+    if abs(ratio-1.0)>.001: filters += [f'asetrate=48000*{ratio:.4f}', 'aresample=48000', f'atempo={1/ratio:.4f}']
+    if abs(tempo-1.0)>.001: filters.append(f'atempo={tempo:.4f}')
+    if filters: run(['ffmpeg','-y','-i',str(src),'-af',','.join(filters),'-ar','48000','-ac','1','-c:a','pcm_s16le',str(dst)])
+    else: run(['ffmpeg','-y','-i',str(src),'-ar','48000','-ac','1','-c:a','pcm_s16le',str(dst)])
+
 def synthesize(text,idx):
-    wav=WORK/f'voice_{idx:02d}.wav'; mp3=WORK/f'voice_{idx:02d}.mp3'; voice=os.getenv('INPUT_VOICE','pt-BR-AntonioNeural'); rate=os.getenv('EDGE_TTS_RATE','-5%')
+    wav=WORK/f'voice_{idx:02d}.wav'; raw=WORK/f'voice_raw_{idx:02d}.wav'; mp3=WORK/f'voice_{idx:02d}.mp3'; voice=os.getenv('INPUT_VOICE','pt-BR-AntonioNeural'); _,_,pitch,rate=voice_settings()
     try:
-        run(['edge-tts','--voice',voice,f'--rate={rate}','--text',text,'--write-media',str(mp3)])
-        if not mp3.exists() or mp3.stat().st_size<1000: raise RuntimeError('Edge TTS não gerou mídia válida')
+        run(['edge-tts','--voice',voice,f'--rate={rate}',f'--pitch={pitch}','--text',text,'--write-media',str(mp3)])
+        if not mp3.exists() or mp3.stat().st_size<1000: raise RuntimeError('voz inválida')
         run(['ffmpeg','-y','-i',str(mp3),'-ar','48000','-ac','1','-c:a','pcm_s16le',str(wav)])
         if duration(wav)<.3: raise RuntimeError('áudio curto demais')
         return wav,'edge-tts'
     except Exception as exc:
-        print(f'Cena {idx+1}: Edge TTS falhou ({exc}); usando Piper.',flush=True)
-        run(['piper','--model',PIPER_MODEL,'--output_file',str(wav)],stdin=text.encode('utf-8'))
-        return wav,'piper-fallback'
+        print(f'Cena {idx+1}: voz principal indisponível ({exc}); usando alternativa.',flush=True)
+        run(['piper','--model',PIPER_MODEL,'--output_file',str(raw)],stdin=text.encode('utf-8'))
+        postprocess_fallback_voice(raw,wav)
+        return wav,'voice-fallback'
 
 def download(url,path):
     with requests.get(url,stream=True,timeout=120,headers={'User-Agent':'ShortCloudStudio/3.0'}) as r:
@@ -134,16 +149,30 @@ def make_srt(scenes,durations,path):
 
 def music_track(total,style,path):
     if style=='off': return None
-    sr=48000; n=int(total*sr); t=np.arange(n,dtype=np.float32)/sr; configs={'viral-pulse':(104,220.),'cinematic-rise':(76,146.8),'mystery-tension':(68,110.),'emotional-ambient':(64,174.6),'epic-ancient':(82,130.8)}; bpm,freq=configs.get(style,(72,146.8)); audio=.08*np.sin(2*np.pi*freq*t)+.035*np.sin(2*np.pi*freq*1.5*t); beat=max(1,int(sr*60/bpm))
+    sr=48000; n=max(1,int(total*sr)); t=np.arange(n,dtype=np.float32)/sr
+    cfg={
+      'viral-pulse':{'bpm':108,'notes':[220.0,277.18,329.63,440.0],'bass':55.0,'pad':0.10,'beat':0.16},
+      'cinematic-rise':{'bpm':74,'notes':[110.0,164.81,220.0,329.63],'bass':55.0,'pad':0.13,'beat':0.09},
+      'mystery-tension':{'bpm':66,'notes':[110.0,116.54,164.81,174.61],'bass':55.0,'pad':0.11,'beat':0.06},
+      'emotional-ambient':{'bpm':62,'notes':[130.81,164.81,196.0,261.63],'bass':65.41,'pad':0.12,'beat':0.035},
+      'epic-ancient':{'bpm':82,'notes':[110.0,146.83,164.81,220.0],'bass':55.0,'pad':0.11,'beat':0.14}
+    }.get(style,{'bpm':72,'notes':[110.0,146.83,220.0,293.66],'bass':55.0,'pad':0.10,'beat':0.08})
+    audio=np.zeros(n,dtype=np.float32); segment=max(1,int(sr*60/cfg['bpm']*2))
+    for pos in range(0,n,segment):
+        note=cfg['notes'][(pos//segment)%len(cfg['notes'])]; end=min(n,pos+segment); tt=t[pos:end]
+        audio[pos:end]+=cfg['pad']*(0.55*np.sin(2*np.pi*note*tt)+0.30*np.sin(2*np.pi*(note*1.5)*tt)+0.15*np.sin(2*np.pi*(note*.5)*tt))
+    audio += 0.035*np.sin(2*np.pi*cfg['bass']*t)
+    beat=max(1,int(sr*60/cfg['bpm']))
     for start in range(0,n,beat):
-        ln=min(int(.11*sr),n-start); env=np.linspace(1,0,ln,dtype=np.float32); audio[start:start+ln]+=.13*np.sin(2*np.pi*55*np.arange(ln)/sr)*env
-    sf.write(path,np.tanh(audio*1.4).astype(np.float32),sr); return path
+        ln=min(int(.12*sr),n-start); env=np.linspace(1,0,ln,dtype=np.float32); audio[start:start+ln]+=cfg['beat']*np.sin(2*np.pi*52*np.arange(ln)/sr)*env
+    fade=max(1,min(int(sr*1.5),n//4)); audio[:fade]*=np.linspace(0,1,fade,dtype=np.float32); audio[-fade:]*=np.linspace(1,0,fade,dtype=np.float32)
+    peak=max(.001,float(np.max(np.abs(audio)))); audio=np.clip(audio/peak*.55,-.95,.95); sf.write(path,audio.astype(np.float32),sr); return path
 
 def main():
     plan=json.loads(os.environ['INPUT_PLAN_JSON']); scenes=plan.get('scenes') or []
     if len(scenes)<6: raise RuntimeError('plano com poucas cenas')
-    style=os.getenv('INPUT_CARTOON_STYLE','classic-2d'); niche=os.getenv('INPUT_NICHE_KEY','custom'); visual=os.getenv('INPUT_VISUAL_STYLE','realistic'); media_mode=os.getenv('INPUT_MEDIA_MODE','hybrid'); captions=os.getenv('INPUT_CAPTIONS','on'); music=os.getenv('INPUT_MUSIC','off'); voice=os.getenv('INPUT_VOICE','pt-BR-AntonioNeural'); font_name=os.getenv('INPUT_CAPTION_FONT','DejaVu Sans'); font_size=int(os.getenv('INPUT_CAPTION_SIZE','38')); volume={'low':'0.08','medium':'0.13','high':'0.18'}.get(os.getenv('INPUT_MUSIC_VOLUME','medium'),'0.13')
-    font_name=re.sub(r"[^A-Za-z0-9 _-]",'',font_name)[:50] or 'DejaVu Sans'; font_size=max(24,min(64,font_size)); voices=[]; clips=[]; durations=[]; sources=[]; engines=[]; used_photo=set(); used_video=set()
+    style=os.getenv('INPUT_CARTOON_STYLE','classic-2d'); niche=os.getenv('INPUT_NICHE_KEY','custom'); visual=os.getenv('INPUT_VISUAL_STYLE','realistic'); media_mode=os.getenv('INPUT_MEDIA_MODE','hybrid'); captions=os.getenv('INPUT_CAPTIONS','on'); music=os.getenv('INPUT_MUSIC','off'); voice=os.getenv('INPUT_VOICE','pt-BR-AntonioNeural'); pitch_mode=os.getenv('INPUT_VOICE_PITCH','default'); speed_mode=os.getenv('INPUT_VOICE_SPEED','default'); font_name=os.getenv('INPUT_CAPTION_FONT','Montserrat'); font_size=int(os.getenv('INPUT_CAPTION_SIZE','38')); volume={'low':'0.12','medium':'0.22','high':'0.34'}.get(os.getenv('INPUT_MUSIC_VOLUME','medium'),'0.22')
+    font_name=re.sub(r"[^A-Za-z0-9 _-]",'',font_name)[:50] or 'Montserrat'; font_size=max(24,min(64,font_size)); voices=[]; clips=[]; durations=[]; sources=[]; engines=[]; used_photo=set(); used_video=set()
     for i,scene in enumerate(scenes):
         text=str(scene.get('narration') or '').strip()
         if not text: raise RuntimeError(f'cena {i+1} sem narração')
@@ -157,20 +186,20 @@ def main():
                 if url:
                     src=WORK/f'real_{i:02d}.mp4'; download(url,src); render_video(src,clip,dur); sources.append({'scene':i+1,'type':'video','pexels_id':vid,'query':q})
                 elif media_mode=='videos':
-                    raise RuntimeError(f'Não encontrei vídeo real compatível para a cena {i+1}. Ajuste o roteiro ou use Fotos + vídeos.')
+                    raise RuntimeError(f'Não encontrei vídeo compatível para a cena {i+1}. Ajuste o roteiro ou use Fotos + vídeos.')
                 else: requested='image'
             if requested=='image':
                 pid,url,q=pexels_photo(queries,used_photo); img=WORK/f'real_{i:02d}.jpg'
-                if url: download(url,img); source='pexels-photo'; sources.append({'scene':i+1,'type':'photo','pexels_id':pid,'query':q})
+                if url: download(url,img); source='photo-library'; sources.append({'scene':i+1,'type':'photo','source_id':pid,'query':q})
                 else: source=ai_image(scene,img,style,niche,i,True); sources.append({'scene':i+1,'type':'photo-fallback','source':source})
                 render_image(img,clip,dur,i)
         clips.append(clip)
     video=WORK/'video.mp4'; narration=WORK/'narration.wav'; concat(clips,'video',video); concat(voices,'audio',narration); total=duration(narration); srt=WORK/'captions.srt'; make_srt(scenes,durations,srt); bgm=music_track(total,music,WORK/'music.wav'); final=OUT/'final.mp4'; vf=[]
-    if captions=='on': vf=['-vf',f"subtitles={srt}:force_style='FontName={font_name},FontSize={font_size},PrimaryColour=&H00FFFFFF,OutlineColour=&H00101010,BorderStyle=1,Outline=3,Shadow=1,Alignment=2,MarginV=110,Bold=1'"]
-    if bgm: run(['ffmpeg','-y','-i',str(video),'-i',str(narration),'-i',str(bgm),'-filter_complex',f'[1:a]volume=1.0[v];[2:a]volume={volume}[m];[v][m]amix=inputs=2:duration=first:dropout_transition=2[a]',*vf,'-map','0:v','-map','[a]','-c:v','libx264','-preset','veryfast','-crf','22','-c:a','aac','-b:a','192k','-movflags','+faststart','-shortest',str(final)])
+    if captions=='on': vf=['-vf',f"subtitles={srt}:force_style='FontName={font_name},FontSize={font_size},PrimaryColour=&H00FFFFFF,OutlineColour=&H00101010,BorderStyle=1,Outline=3,Shadow=1,Alignment=2,MarginV=55,Bold=1'"]
+    if bgm: run(['ffmpeg','-y','-i',str(video),'-i',str(narration),'-i',str(bgm),'-filter_complex',f'[1:a]volume=1.0[v];[2:a]volume={volume}[m];[v][m]amix=inputs=2:duration=first:dropout_transition=2:normalize=0,alimiter=limit=0.95[a]',*vf,'-map','0:v','-map','[a]','-c:v','libx264','-preset','veryfast','-crf','22','-c:a','aac','-b:a','192k','-movflags','+faststart','-shortest',str(final)])
     else: run(['ffmpeg','-y','-i',str(video),'-i',str(narration),*vf,'-map','0:v','-map','1:a','-c:v','libx264','-preset','veryfast','-crf','22','-c:a','aac','-b:a','192k','-movflags','+faststart','-shortest',str(final)])
-    meta={'title':plan.get('title') or os.getenv('INPUT_TOPIC','Short Cloud Studio'),'summary':plan.get('summary',''),'visual_style':visual,'cartoon_style':style if visual=='cartoon' else None,'media_mode':media_mode,'scene_sources':sources,'voice':voice,'voice_engine':'edge-tts' if all(x=='edge-tts' for x in engines) else 'edge-tts-with-piper-fallback','captions':captions=='on','caption_font':font_name,'caption_size':font_size,'duration_seconds':round(duration(final),2),'engine':'Short Cloud Studio unified renderer'}; (OUT/'metadata.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2),encoding='utf-8')
-    if not final.exists() or final.stat().st_size<500000: raise RuntimeError('MP4 final inválido')
+    meta={'title':plan.get('title') or os.getenv('INPUT_TOPIC','Short Cloud Studio'),'summary':plan.get('summary',''),'visual_style':visual,'cartoon_style':style if visual=='cartoon' else None,'media_mode':media_mode,'scene_sources':sources,'voice':voice,'voice_pitch':pitch_mode,'voice_speed':speed_mode,'voice_engine':'edge-tts' if all(x=='edge-tts' for x in engines) else 'edge-tts-with-fallback','captions':captions=='on','caption_font':font_name,'caption_size':font_size,'caption_position':'bottom','music':music,'music_volume':os.getenv('INPUT_MUSIC_VOLUME','medium'),'duration_seconds':round(duration(final),2),'engine':'Short Cloud Studio'}; (OUT/'metadata.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2),encoding='utf-8')
+    if not final.exists() or final.stat().st_size<500000: raise RuntimeError('Vídeo final inválido')
     print(json.dumps(meta,ensure_ascii=False),flush=True)
 
 if __name__=='__main__': main()

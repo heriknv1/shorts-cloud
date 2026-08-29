@@ -12,7 +12,7 @@
     <section class="hero">
       <span class="pill">3 renders por dia • cloud</span>
       <h1>Shorts Cloud Studio</h1>
-      <p>Planeje, revise e renderize Shorts de 60–70 segundos sem pesar no seu computador ou tablet.</p>
+      <p>Escolha um nicho pronto ou personalize tudo. Revise o plano e só depois mande renderizar.</p>
     </section>
 
     <section class="top-grid">
@@ -31,20 +31,40 @@
 
     <section class="card">
       <div class="section-head">
-        <div><span class="eyebrow">1. Ideia</span><h2>O que vamos contar?</h2></div>
-        <span class="step-note">Criar o plano não consome render.</span>
+        <div><span class="eyebrow">1. Modo rápido</span><h2>Escolha um nicho e deixe o sistema preparar tudo</h2></div>
+        <span class="step-note">1 clique → tema + direção + plano</span>
+      </div>
+      <div id="presetGrid" class="preset-grid">
+        <button class="preset" data-preset="biblical"><strong>Histórias bíblicas</strong><span>Época bíblica, narrativa fiel e visual histórico.</span></button>
+        <button class="preset" data-preset="cinematic"><strong>Histórias cinematográficas</strong><span>Drama, emoção e cenas de alto impacto.</span></button>
+        <button class="preset" data-preset="mysteries"><strong>Mistérios e curiosidades</strong><span>Gancho forte, suspense e revelação.</span></button>
+        <button class="preset" data-preset="ancient"><strong>História antiga</strong><span>Impérios, batalhas e civilizações antigas.</span></button>
+        <button class="preset" data-preset="motivation"><strong>Motivacional</strong><span>Superação, disciplina e reflexão.</span></button>
+        <button class="preset" data-preset="science"><strong>Ciência e espaço</strong><span>Curiosidades científicas e universo.</span></button>
+        <button class="preset" data-preset="true-stories"><strong>Histórias reais surpreendentes</strong><span>Casos marcantes contados como mini-documentário.</span></button>
+        <button class="preset" data-preset="horror"><strong>Terror e suspense</strong><span>Atmosfera sombria e tensão crescente.</span></button>
+        <button class="preset" data-preset="life-lessons"><strong>Reflexões e lições de vida</strong><span>Histórias curtas com mensagem final.</span></button>
+        <button class="preset" data-preset="animals"><strong>Natureza e animais</strong><span>Comportamentos, fatos e sobrevivência.</span></button>
+      </div>
+      <div id="presetStatus" class="preset-status muted">Nenhum nicho selecionado.</div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div><span class="eyebrow">2. Modo personalizado</span><h2>Ou escreva seu próprio tema</h2></div>
+        <span class="step-note">Opcional</span>
       </div>
       <label for="topic">Tema do vídeo</label>
-      <textarea id="topic" rows="3" placeholder="Ex.: Davi e Golias — conte a história de forma fiel, emocionante e fácil de acompanhar"></textarea>
+      <textarea id="topic" rows="3" placeholder="Ex.: Davi e Golias — conte a história de forma fiel, emocionante e cronológica"></textarea>
       <div class="idea-row">
-        <input id="niche" placeholder="Nicho para receber 3 sugestões, ex.: histórias bíblicas" maxlength="160" />
+        <input id="niche" placeholder="Digite um nicho para receber 3 sugestões" maxlength="160" />
         <button id="ideasBtn" class="secondary">Sugerir 3 ideias</button>
       </div>
       <div id="ideaChips" class="chips"></div>
     </section>
 
     <section class="card">
-      <div class="section-head"><div><span class="eyebrow">2. Direção</span><h2>Escolha como o vídeo deve parecer</h2></div></div>
+      <div class="section-head"><div><span class="eyebrow">3. Direção</span><h2>Visual, voz e trilha</h2></div></div>
       <div class="grid3">
         <div><label>Duração</label><select id="duration"><option value="60">60 segundos</option><option value="65" selected>65 segundos</option><option value="70">70 segundos</option></select></div>
         <div><label>Tom da história</label><select id="tone"><option value="cinematic">Cinematográfico e emocional</option><option value="documentary">Documental e intrigante</option><option value="dramatic">Dramático e misterioso</option><option value="energetic">Rápido e energético</option></select></div>
@@ -53,46 +73,63 @@
         <div>
           <label>Voz</label>
           <select id="voice">
-            <optgroup label="Masculinas — Kokoro pt-BR">
-              <option value="pm_alex" selected>Alex — natural</option>
-              <option value="pm_santa">Santa — mais grave</option>
-            </optgroup>
-            <optgroup label="Femininas — Kokoro pt-BR">
-              <option value="pf_dora">Dora — natural</option>
-            </optgroup>
+            <optgroup label="Masculinas — Kokoro pt-BR"><option value="pm_alex" selected>Alex — natural</option><option value="pm_santa">Santa — mais grave</option></optgroup>
+            <optgroup label="Femininas — Kokoro pt-BR"><option value="pf_dora">Dora — natural</option></optgroup>
           </select>
         </div>
         <div><label>Legendas</label><select id="captions"><option value="on" selected>Ativadas — discretas no rodapé</option><option value="off">Sem legenda</option></select></div>
+        <div id="cartoonStyleWrap" hidden>
+          <label>Estilo do desenho</label>
+          <select id="cartoonStyle">
+            <option value="interdimensional">Sci-fi interdimensional — humor surreal</option>
+            <option value="paper-cut">Recorte satírico — formas simples</option>
+            <option value="retro-surreal">Retro surreal — cotidiano estranho</option>
+            <option value="classic-2d" selected>2D clássico — contornos limpos</option>
+            <option value="comic">HQ cinematográfica — sombras fortes</option>
+          </select>
+        </div>
+        <div>
+          <label>Música de fundo</label>
+          <select id="music">
+            <option value="off" selected>Sem música</option>
+            <option value="viral-pulse">Viral Pulse — moderno e leve</option>
+            <option value="cinematic-rise">Cinematic Rise — emocional</option>
+            <option value="mystery-tension">Mystery Tension — suspense</option>
+            <option value="emotional-ambient">Emotional Ambient — suave</option>
+            <option value="epic-ancient">Epic Ancient — épico / histórico</option>
+          </select>
+        </div>
+        <div id="musicVolumeWrap" hidden><label>Volume da música</label><select id="musicVolume"><option value="low">Baixo</option><option value="medium" selected>Médio</option><option value="high">Alto</option></select></div>
       </div>
-      <div class="notice">As vozes principais usam Kokoro local no GitHub Actions. O modelo é open-source; se ele falhar, o sistema usa a voz simples de emergência.</div>
-      <div id="cartoonNotice" class="notice" hidden>No modo desenho, o sistema usa fotos adequadas e aplica uma estilização ilustrada localmente. Não depende de créditos de geração de imagem.</div>
+      <div class="notice">As cinco trilhas são instrumentais originais geradas localmente durante o render. Não usam gravações de músicas comerciais nem exigem outra API.</div>
+      <div id="cartoonNotice" class="notice" hidden>Os estilos de desenho são presets próprios inspirados em características gerais de animação, sem copiar personagens, cenários ou artes de séries conhecidas.</div>
     </section>
 
     <section class="card">
-      <div class="section-head"><div><span class="eyebrow">3. Referências</span><h2>Envie até 3 imagens</h2></div><span class="step-note">Opcional</span></div>
+      <div class="section-head"><div><span class="eyebrow">4. Referências</span><h2>Envie até 3 imagens</h2></div><span class="step-note">Opcional</span></div>
       <label class="upload-box" for="references">
         <input id="references" type="file" accept="image/jpeg,image/png,image/webp" multiple />
         <strong>Escolher imagens de referência</strong>
-        <span>A IA analisa as referências para orientar cenário, roupas, composição e clima. As imagens não são enviadas ao GitHub.</span>
+        <span>A IA usa as referências para orientar cenário, roupas, composição e clima durante o planejamento.</span>
       </label>
       <div id="referencePreview" class="reference-grid"></div>
     </section>
 
     <section class="card action-card">
-      <div><span class="eyebrow">4. Plano seguro</span><h2>Revise antes de renderizar</h2><p class="muted">Primeiro geramos somente roteiro + cenas. Só o botão de render final entra na sua cota de 3 vídeos.</p></div>
+      <div><span class="eyebrow">5. Plano seguro</span><h2>Revise antes de renderizar</h2><p class="muted">Criar o plano não entra na cota de render. Você pode corrigir qualquer cena antes do MP4.</p></div>
       <button id="planBtn" class="primary">Criar plano do vídeo</button>
       <div id="message" class="message" hidden></div>
     </section>
 
     <section id="planSection" class="card" hidden>
-      <div class="section-head"><div><span class="eyebrow">5. Revisão</span><h2 id="planTitle">Plano do vídeo</h2></div><span class="badge ok">Não renderizado</span></div>
+      <div class="section-head"><div><span class="eyebrow">6. Revisão</span><h2 id="planTitle">Plano do vídeo</h2></div><span class="badge ok">Não renderizado</span></div>
       <p id="planSummary" class="summary"></p>
       <div id="sceneEditor" class="scene-list"></div>
-      <div class="approval-bar"><div><strong>Confira principalmente a fala e o que deve aparecer.</strong><span>Você pode editar qualquer cena antes de renderizar.</span></div><button id="generateBtn" class="primary small-primary">Aprovar e gerar MP4</button></div>
+      <div class="approval-bar"><div><strong>Confira a fala e o visual de cada cena.</strong><span>As buscas já recebem o contexto do nicho e da época.</span></div><button id="generateBtn" class="primary small-primary">Aprovar e gerar MP4</button></div>
     </section>
 
     <section class="card">
-      <div class="section-head"><div><span class="eyebrow">Histórico</span><h2>Renderizações</h2></div><span class="muted">atualiza automaticamente</span></div>
+      <div class="section-head"><div><span class="eyebrow">Histórico</span><h2>Renderizações</h2></div><span class="muted">progresso aproximado</span></div>
       <div id="runs" class="runs"><p class="muted">Nenhuma informação ainda.</p></div>
     </section>
   </main>

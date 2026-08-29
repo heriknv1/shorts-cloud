@@ -1,0 +1,96 @@
+name: Generate Short
+run-name: "Short — ${{ inputs.topic }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: Tema do vídeo
+        required: true
+        type: string
+      duration:
+        description: Duração alvo (60-70)
+        required: true
+        default: "65"
+        type: string
+      style:
+        description: Estilo do vídeo
+        required: true
+        default: cinematográfico e emocional
+        type: string
+      request_id:
+        description: Identificador da solicitação
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  GROQ_MODEL: qwen/qwen3.8-27b
+  PIPER_VOICE: pt_BR-faber-medium
+  PIPER_MODEL_PATH: models/pt_BR-faber-medium.onnx
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Baixar projeto
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Instalar FFmpeg e dependências
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Baixar voz pt-BR
+        run: |
+          mkdir -p models
+          curl -L --fail --retry 3 \
+            -o models/pt_BR-faber-medium.onnx \
+            https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx
+          curl -L --fail --retry 3 \
+            -o models/pt_BR-faber-medium.onnx.json \
+            https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx.json
+
+      - name: Gerar vídeo
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          INPUT_TOPIC: ${{ inputs.topic }}
+          INPUT_DURATION: ${{ inputs.duration }}
+          INPUT_STYLE: ${{ inputs.style }}
+        run: |
+          python scripts/generate_short.py "$INPUT_TOPIC" "$INPUT_DURATION" "$INPUT_STYLE"
+
+      - name: Guardar artefato por 2 dias
+        uses: actions/upload-artifact@v4
+        with:
+          name: short-${{ github.run_id }}
+          path: |
+            output/final.mp4
+            output/metadata.json
+          retention-days: 2
+          compression-level: 0
+
+      - name: Publicar MP4 em Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE=$(python - <<'PY'
+          import json
+          print(json.load(open('output/metadata.json', encoding='utf-8')).get('title','Short gerado'))
+          PY
+          )
+          gh release create "short-${GITHUB_RUN_ID}" output/final.mp4 output/metadata.json \
+            --title "$TITLE" \
+            --notes "Vídeo gerado automaticamente pelo Shorts Cloud."

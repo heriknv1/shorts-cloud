@@ -1,7 +1,7 @@
-const { requirePin } = require('../lib/auth');
+const { requireAuth } = require('../lib/auth');
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST.' });
-  if (!requirePin(req, res)) return;
+  if (!requireAuth(req, res)) return;
 
   try {
     const key = process.env.GROQ_API_KEY;

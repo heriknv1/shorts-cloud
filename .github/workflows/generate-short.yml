@@ -8,11 +8,13 @@ on:
       duration: { description: Duração alvo, required: true, default: "65", type: string }
       tone: { description: Tom, required: true, default: cinematic, type: string }
       niche_key: { description: Nicho, required: true, default: custom, type: string }
-      visual_style: { description: Modo visual, required: true, default: cartoon, type: string }
+      visual_style: { description: Visual, required: true, default: realistic, type: string }
       cartoon_style: { description: Estilo do desenho, required: true, default: classic-2d, type: string }
-      media_mode: { description: Mídia, required: true, default: photos, type: string }
+      media_mode: { description: Mídia, required: true, default: hybrid, type: string }
       voice: { description: Voz, required: true, default: pt-BR-AntonioNeural, type: string }
       captions: { description: Legendas, required: true, default: "on", type: string }
+      caption_font: { description: Fonte, required: true, default: "DejaVu Sans", type: string }
+      caption_size: { description: Tamanho da fonte, required: true, default: "38", type: string }
       music: { description: Trilha, required: true, default: "off", type: string }
       music_volume: { description: Volume, required: true, default: medium, type: string }
       request_id: { description: ID, required: false, type: string }
@@ -21,9 +23,9 @@ permissions:
 jobs:
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
-      - name: Baixar Turbo v2
+      - name: Baixar Short Cloud Studio
         uses: actions/checkout@v4
         with:
           ref: main
@@ -32,10 +34,10 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - name: Instalar motor Turbo
+      - name: Instalar motor de vídeo
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg fonts-dejavu-core espeak-ng libsndfile1
+          sudo apt-get install -y ffmpeg fonts-dejavu-core fonts-liberation fonts-montserrat espeak-ng libsndfile1
           python -m pip install --upgrade pip
           pip install requests==2.32.5 piper-tts==1.7.0 edge-tts==7.2.3 soundfile==0.13.1 Pillow==11.3.0 numpy==2.2.6
       - name: Preparar voz brasileira
@@ -43,8 +45,9 @@ jobs:
           mkdir -p models
           curl -L --fail --retry 3 -o models/pt_BR-faber-medium.onnx https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx
           curl -L --fail --retry 3 -o models/pt_BR-faber-medium.onnx.json https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx.json
-      - name: Gerar ilustrações Cartoon
+      - name: Gerar mídia e montar vídeo
         env:
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           PIPER_MODEL_PATH: models/pt_BR-faber-medium.onnx
           INPUT_VOICE: ${{ inputs.voice }}
           EDGE_TTS_RATE: "-5%"
@@ -53,9 +56,12 @@ jobs:
           INPUT_DURATION: ${{ inputs.duration }}
           INPUT_TONE: ${{ inputs.tone }}
           INPUT_NICHE_KEY: ${{ inputs.niche_key }}
-          INPUT_VISUAL_STYLE: cartoon
+          INPUT_VISUAL_STYLE: ${{ inputs.visual_style }}
           INPUT_CARTOON_STYLE: ${{ inputs.cartoon_style }}
+          INPUT_MEDIA_MODE: ${{ inputs.media_mode }}
           INPUT_CAPTIONS: ${{ inputs.captions }}
+          INPUT_CAPTION_FONT: ${{ inputs.caption_font }}
+          INPUT_CAPTION_SIZE: ${{ inputs.caption_size }}
           INPUT_MUSIC: ${{ inputs.music }}
           INPUT_MUSIC_VOLUME: ${{ inputs.music_volume }}
         run: python scripts/generate_turbo.py
@@ -77,4 +83,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TITLE=$(python -c "import json; print(json.load(open('output/metadata.json',encoding='utf-8')).get('title','Short Cloud Studio'))")
-          gh release create "short-${GITHUB_RUN_ID}" output/final.mp4 output/metadata.json --title "$TITLE" --notes "Short Cloud Studio — vídeo gerado em Cartoon."
+          gh release create "short-${GITHUB_RUN_ID}" output/final.mp4 output/metadata.json --title "$TITLE" --notes "Short Cloud Studio — vídeo gerado conforme as escolhas do editor."

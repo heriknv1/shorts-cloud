@@ -43,10 +43,9 @@ def duration(path):
     return float(p.stdout.strip())
 
 def voice_settings():
-    pitch_mode=os.getenv('INPUT_VOICE_PITCH','default'); speed_mode=os.getenv('INPUT_VOICE_SPEED','default')
+    pitch_mode=os.getenv('INPUT_VOICE_PITCH','default')
     pitch={'low':'-7Hz','default':'+0Hz','high':'+7Hz'}.get(pitch_mode,'+0Hz')
-    rate={'slow':'-8%','default':'+0%','fast':'+7%'}.get(speed_mode,'+0%')
-    return pitch_mode,speed_mode,pitch,rate
+    return pitch_mode,'default',pitch,'+0%'
 
 def naturalize_speech_text(text):
     text=str(text or '').strip().replace('—',', ').replace('–',', ')
@@ -62,8 +61,8 @@ def selected_profile():
     return gemini_voice,edge_voice,profile
 
 def director_prompt(spoken):
-    pitch_mode,speed_mode,_,_=voice_settings(); tone=os.getenv('INPUT_TONE','cinematic').strip().lower(); niche=os.getenv('INPUT_NICHE_KEY','custom').strip().lower(); _,_,profile=selected_profile()
-    pace={'slow':'measured and calm, with natural pauses but never dragging','default':'natural conversational pacing, fluid and human','fast':'brisk and engaging, while remaining perfectly clear'}.get(speed_mode,'natural conversational pacing, fluid and human')
+    pitch_mode,_,_,_=voice_settings(); tone=os.getenv('INPUT_TONE','cinematic').strip().lower(); niche=os.getenv('INPUT_NICHE_KEY','custom').strip().lower(); _,_,profile=selected_profile()
+    pace='natural conversational pacing, fluid and human'
     register={'low':'slightly lower vocal register, relaxed and resonant, never artificially pitched','default':'comfortable neutral vocal register','high':'slightly brighter vocal register, still natural and relaxed'}.get(pitch_mode,'comfortable neutral vocal register')
     mood={'cinematic':'cinematic, intimate and emotionally engaging without sounding theatrical','documentary':'credible, informative and conversational, like a premium documentary narrator','dramatic':'emotionally present and dramatic with restraint, never exaggerated','energetic':'energetic and charismatic without shouting or sounding like an advertisement'}.get(tone,'natural, engaging and conversational')
     if niche in {'biblical','devotional'}: context='For biblical or devotional content, sound reverent, sincere and warm, with respectful emphasis.'
@@ -94,9 +93,8 @@ def polish_voice(src,dst):
     run(['ffmpeg','-y','-i',str(src),'-af',filters,'-ar','48000','-ac','1','-c:a','pcm_s16le',str(dst)],quiet=True)
 
 def postprocess_fallback_voice(src,dst):
-    pitch_mode,speed_mode,_,_=voice_settings(); tempo={'slow':0.94,'default':1.0,'fast':1.06}.get(speed_mode,1.0); ratio={'low':0.97,'default':1.0,'high':1.03}.get(pitch_mode,1.0); filters=[]
+    pitch_mode,_,_,_=voice_settings(); ratio={'low':0.97,'default':1.0,'high':1.03}.get(pitch_mode,1.0); filters=[]
     if abs(ratio-1.0)>.001: filters += [f'asetrate=48000*{ratio:.4f}','aresample=48000',f'atempo={1/ratio:.4f}']
-    if abs(tempo-1.0)>.001: filters.append(f'atempo={tempo:.4f}')
     filters += ['highpass=f=65','lowpass=f=12500','acompressor=threshold=-19dB:ratio=1.5:attack=28:release=240','alimiter=limit=0.95']
     run(['ffmpeg','-y','-i',str(src),'-af',','.join(filters),'-ar','48000','-ac','1','-c:a','pcm_s16le',str(dst)],quiet=True)
 

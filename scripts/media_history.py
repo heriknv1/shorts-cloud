@@ -41,6 +41,15 @@ def load():
     print(f'Memória visual carregada: {len(PHOTO_IDS)} fotos e {len(VIDEO_IDS)} vídeos bloqueados.',flush=True)
 
 
+def _typed(values):
+    out=set(values)
+    for value in list(values):
+        s=str(value)
+        out.add(s)
+        if s.isdigit():out.add(int(s))
+    return out
+
+
 def install(turbo):
     global INSTALLED
     if INSTALLED:return
@@ -50,16 +59,14 @@ def install(turbo):
     original_video=turbo.pexels_video
 
     def photo(queries,used):
-        blocked={str(x) for x in PHOTO_IDS}|{str(x) for x in THIS_PHOTOS}|{str(x) for x in used}
-        proxy=set(blocked)
+        proxy=_typed(PHOTO_IDS|THIS_PHOTOS|{str(x) for x in used})
         pid,url,q=original_photo(queries,proxy)
         if pid is not None:
             sid=str(pid);THIS_PHOTOS.add(sid);used.add(pid)
         return pid,url,q
 
     def video(queries,used):
-        blocked={str(x) for x in VIDEO_IDS}|{str(x) for x in THIS_VIDEOS}|{str(x) for x in used}
-        proxy=set(blocked)
+        proxy=_typed(VIDEO_IDS|THIS_VIDEOS|{str(x) for x in used})
         vid,url,q=original_video(queries,proxy)
         if vid is not None:
             sid=str(vid);THIS_VIDEOS.add(sid);used.add(vid)

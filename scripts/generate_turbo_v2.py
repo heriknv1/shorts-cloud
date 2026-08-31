@@ -128,8 +128,11 @@ def pexels_photo(queries,used):
                 continue
             if not stock_result_allowed(p.get('alt','')):
                 continue
+            width=int(p.get('width') or 0); height=int(p.get('height') or 0)
+            if height<width or width<1080 or height<1920:
+                continue
             src=p.get('src') or {}
-            link=src.get('portrait') or src.get('large2x') or src.get('large') or src.get('original')
+            link=src.get('original') or src.get('large2x')
             if link:
                 used.add(p.get('id'))
                 return p.get('id'),link,q
@@ -155,7 +158,7 @@ def pexels_video(queries,used):
                 continue
             if not stock_result_allowed(v.get('url','')):
                 continue
-            files=[x for x in v.get('video_files',[]) if x.get('link') and x.get('width') and x.get('height')]
+            files=[x for x in v.get('video_files',[]) if x.get('link') and x.get('width') and x.get('height') and int(x['height'])>=int(x['width']) and int(x['width'])>=1080 and int(x['height'])>=1920]
             files.sort(key=lambda x:(0 if x['height']>=x['width'] else 1,abs((x.get('width') or 0)-1080),-int(x.get('height') or 0)))
             if files:
                 used.add(v.get('id'))

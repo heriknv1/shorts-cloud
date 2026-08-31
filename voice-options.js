@@ -1,20 +1,30 @@
 (()=>{
-  const VOICES=[
-    ['gemini:GacruxDeep','Gacrux Grave — masculina profunda e natural'],
-    ['gemini:Sulafat','Sulafat — calorosa e expressiva'],
-    ['gemini:Gacrux','Gacrux — firme e acolhedora'],
-    ['gemini:Achernar','Achernar — suave e íntima'],
-    ['gemini:Charon','Charon — clara e documental'],
-    ['gemini:Kore','Kore — confiante e marcante'],
-    ['gemini:Puck','Puck — viva e energética']
+  const MALE=[
+    ['gemini:AlgenibDeep','Algenib Grave — Masculina • grave e encorpada'],
+    ['gemini:Charon','Charon — Masculina • clara e documental'],
+    ['gemini:Puck','Puck — Masculina • viva e energética']
   ];
+  const FEMALE=[
+    ['gemini:Sulafat','Sulafat — Feminina • calorosa e expressiva'],
+    ['gemini:Gacrux','Gacrux — Feminina • madura e acolhedora'],
+    ['gemini:Achernar','Achernar — Feminina • suave e íntima'],
+    ['gemini:Kore','Kore — Feminina • confiante e marcante']
+  ];
+  const VOICES=[...MALE,...FEMALE];
   const LABELS=Object.fromEntries(VOICES);
+  LABELS.off='Sem narração';
   const LEGACY={
-    'pt-BR-AntonioNeural':'gemini:Gacrux',
+    'gemini:GacruxDeep':'gemini:AlgenibDeep',
+    'pt-BR-AntonioNeural':'gemini:Charon',
     'pt-BR-FranciscaNeural':'gemini:Sulafat',
     'pt-BR-ThalitaNeural':'gemini:Achernar'
   };
   const SPEED_LABELS={default:'Padrão',fast:'Rápido',veryfast:'Veloz'};
+
+  function voiceMarkup(){
+    const opts=group=>group.map(([value,label])=>`<option value="${value}">${label}</option>`).join('');
+    return `<option value="off">Sem narração</option><optgroup label="Vozes masculinas">${opts(MALE)}</optgroup><optgroup label="Vozes femininas">${opts(FEMALE)}</optgroup>`;
+  }
 
   function configureSpeed(){
     const speed=document.getElementById('voiceSpeed');
@@ -22,25 +32,31 @@
     const previous=['default','fast','veryfast'].includes(speed.value)?speed.value:'default';
     speed.innerHTML='<option value="default">Padrão</option><option value="fast">Rápido</option><option value="veryfast">Veloz</option>';
     speed.value=previous;
-    const wrap=speed.parentElement;
-    if(wrap)wrap.hidden=false;
-    const label=wrap?.querySelector('label');
+    const label=speed.parentElement?.querySelector('label');
     if(label)label.textContent='Velocidade da narração';
   }
 
-  function syncAudioNotice(){
+  function syncVoiceControls(select){
+    const off=select.value==='off';
+    const pitch=document.getElementById('voicePitch');
+    const speed=document.getElementById('voiceSpeed');
+    if(pitch){pitch.disabled=off;if(pitch.parentElement)pitch.parentElement.hidden=off;}
+    if(speed){speed.disabled=off;if(speed.parentElement)speed.parentElement.hidden=off;}
+  }
+
+  function syncAudioNotice(select){
     const notice=document.getElementById('audioNotice');
-    const speed=document.getElementById('voiceSpeed')?.value||'default';
     if(!notice)return;
-    let value=String(notice.textContent||'');
-    const speedWord=speed==='fast'?'rápida':speed==='veryfast'?'veloz':'padrão';
-    if(/velocidade\s+(lenta|rápida|padrão|normal|veloz)/i.test(value)){
-      value=value.replace(/velocidade\s+(lenta|rápida|padrão|normal|veloz)/gi,`velocidade ${speedWord}`);
-    }else if(/^Voz\s/i.test(value)){
-      value=value.replace(/(Voz\s+[^.]+?)(\.\s|$)/i,`$1, velocidade ${speedWord}$2`);
+    const music=document.getElementById('music')?.value||'off';
+    const vol=document.getElementById('musicVolume')?.value||'medium';
+    const musicText=music==='off'?'Sem música de fundo.':`Música ativada com volume ${vol==='low'?'baixo':vol==='high'?'alto':'médio'}.`;
+    if(select.value==='off'){
+      notice.textContent=`Sem narração. ${musicText} As legendas continuam opcionais.`;
+      return;
     }
-    value=value.replace(/Tom da voz, música/gi,'Tom e velocidade da voz, música');
-    notice.textContent=value;
+    const pitch=document.getElementById('voicePitch')?.value||'default';
+    const speed=document.getElementById('voiceSpeed')?.value||'default';
+    notice.textContent=`Narração ${pitch==='low'?'grave':pitch==='high'?'aguda':'natural'}, velocidade ${speed==='fast'?'rápida':speed==='veryfast'?'veloz':'padrão'}. ${musicText}`;
   }
 
   function configure(){
@@ -50,26 +66,39 @@
     if(!select.dataset.geminiVoices){
       const previous=LEGACY[select.value]||select.value;
       select.dataset.geminiVoices='1';
-      select.innerHTML=VOICES.map(([value,label])=>`<option value="${value}">${label}</option>`).join('');
+      select.innerHTML=voiceMarkup();
       select.value=LABELS[previous]?previous:'gemini:Sulafat';
     }
     const sync=()=>{
       configureSpeed();
+      syncVoiceControls(select);
       const label=document.getElementById('previewVoiceLabel');
       if(label){
-        const short=(LABELS[select.value]||'Narração natural').split(' — ')[0];
-        const pitch=document.getElementById('voicePitch')?.value||'default';
-        const speed=document.getElementById('voiceSpeed')?.value||'default';
-        const forcedDeep=select.value==='gemini:GacruxDeep';
-        label.textContent=`${short} • ${forcedDeep||pitch==='low'?'Grave':pitch==='high'?'Aguda':'Natural'} • ${SPEED_LABELS[speed]||'Padrão'}`;
+        if(select.value==='off')label.textContent='Sem narração';
+        else{
+          const short=(LABELS[select.value]||'Narração natural').split(' — ')[0];
+          const gender=MALE.some(([v])=>v===select.value)?'Masculina':'Feminina';
+          const pitch=document.getElementById('voicePitch')?.value||'default';
+          const speed=document.getElementById('voiceSpeed')?.value||'default';
+          const forcedDeep=select.value==='gemini:AlgenibDeep';
+          label.textContent=`${short} • ${gender} • ${forcedDeep||pitch==='low'?'Grave':pitch==='high'?'Aguda':'Natural'} • ${SPEED_LABELS[speed]||'Padrão'}`;
+        }
       }
-      setTimeout(syncAudioNotice,0);
+      syncAudioNotice(select);
     };
     if(!select.dataset.voiceSync){
       select.dataset.voiceSync='1';
       select.addEventListener('change',sync);
       document.getElementById('voicePitch')?.addEventListener('change',()=>setTimeout(sync,0));
       document.getElementById('voiceSpeed')?.addEventListener('change',()=>setTimeout(sync,0));
+      document.getElementById('music')?.addEventListener('change',()=>setTimeout(sync,0));
+      document.getElementById('musicVolume')?.addEventListener('change',()=>setTimeout(sync,0));
+    }
+    const notice=document.getElementById('audioNotice');
+    if(notice&&!notice.dataset.voiceObserver){
+      notice.dataset.voiceObserver='1';
+      let busy=false;
+      new MutationObserver(()=>{if(busy)return;busy=true;syncAudioNotice(select);queueMicrotask(()=>busy=false)}).observe(notice,{childList:true,characterData:true,subtree:true});
     }
     sync();
   }

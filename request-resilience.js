@@ -10,11 +10,11 @@
     let response=await nativeFetch(input,init);
     if(response.status!==429)return response;
 
-    for(let attempt=0;attempt<2&&response.status===429;attempt++){
-      let retryAfter=3;
+    for(let attempt=0;attempt<1&&response.status===429;attempt++){
+      let retryAfter=10;
       try{
         const data=await response.clone().json();
-        retryAfter=Math.max(2,Math.min(25,Number(data.retryAfterSeconds)||3));
+        retryAfter=Math.max(8,Math.min(30,Number(data.retryAfterSeconds)||10));
       }catch{}
       const message=document.getElementById('message');
       if(message){

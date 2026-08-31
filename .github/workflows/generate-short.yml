@@ -10,21 +10,21 @@ on:
       niche_key: { description: Nicho, required: true, default: custom, type: string }
       visual_style: { description: Visual, required: true, default: realistic, type: string }
       cartoon_style: { description: Estilo do desenho, required: true, default: classic-2d, type: string }
-      media_mode: { description: Mídia, required: true, default: hybrid, type: string }
+      media_mode: { description: Mídia, required: true, default: videos, type: string }
       media_source: { description: Origem visual, required: true, default: auto, type: string }
       reference_image_b64: { description: Referência visual compactada, required: false, type: string }
-      voice: { description: Voz, required: true, default: gemini:Sulafat, type: string }
+      voice: { description: Voz, required: true, default: gemini:Charon, type: string }
       voice_pitch: { description: Tom da voz, required: true, default: default, type: string }
       voice_speed: { description: Velocidade da voz, required: true, default: default, type: string }
       captions: { description: Legendas, required: true, default: "on", type: string }
       caption_font: { description: Fonte, required: true, default: "Montserrat", type: string }
-      caption_size: { description: Tamanho da fonte, required: true, default: "56", type: string }
+      caption_size: { description: Tamanho da fonte, required: true, default: "70", type: string }
       music: { description: Trilha, required: true, default: "off", type: string }
       music_volume: { description: Volume, required: true, default: medium, type: string }
-      editing_pace: { description: Ritmo da edição, required: true, default: balanced, type: string }
-      sfx_mode: { description: Efeitos sonoros, required: true, default: subtle, type: string }
+      editing_pace: { description: Ritmo da edição, required: true, default: cinematic, type: string }
+      sfx_mode: { description: Efeitos sonoros, required: true, default: "off", type: string }
       ambience_mode: { description: Ambiência, required: true, default: subtle, type: string }
-      clean_export: { description: Versão sem legenda, required: true, default: "on", type: string }
+      clean_export: { description: Versão sem legenda, required: true, default: "off", type: string }
       branding_mode: { description: Assinatura visual, required: true, default: "off", type: string }
       brand_text: { description: Nome do canal, required: false, type: string }
       request_id: { description: ID, required: false, type: string }

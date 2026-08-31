@@ -1,5 +1,5 @@
 (()=>{
-  const KEY='short-cloud-content-history-v1';
+  const KEY='short-cloud-content-history-v2';
   const nativeFetch=window.fetch.bind(window);
   const $=id=>document.getElementById(id);
   function read(){try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(v)?v:[]}catch{return[]}}

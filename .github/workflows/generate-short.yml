@@ -38,7 +38,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p work_turbo
-          gh release list --limit 100 --json body --jq '.[].body // ""' > work_turbo/media_history_notes.txt || true
+          gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq '.[].body // ""' > work_turbo/media_history_notes.txt || true
       - name: Preparar Python
         uses: actions/setup-python@v5
         with:

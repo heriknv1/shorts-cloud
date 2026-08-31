@@ -11,6 +11,8 @@ on:
       visual_style: { description: Visual, required: true, default: realistic, type: string }
       cartoon_style: { description: Estilo do desenho, required: true, default: classic-2d, type: string }
       media_mode: { description: Mídia, required: true, default: hybrid, type: string }
+      media_source: { description: Origem visual, required: true, default: auto, type: string }
+      reference_image_b64: { description: Referência visual compactada, required: false, type: string }
       voice: { description: Voz, required: true, default: pt-BR-FranciscaNeural, type: string }
       voice_pitch: { description: Tom da voz, required: true, default: default, type: string }
       voice_speed: { description: Velocidade da voz, required: true, default: default, type: string }
@@ -67,6 +69,8 @@ jobs:
           INPUT_VISUAL_STYLE: ${{ inputs.visual_style }}
           INPUT_CARTOON_STYLE: ${{ inputs.cartoon_style }}
           INPUT_MEDIA_MODE: ${{ inputs.media_mode }}
+          INPUT_MEDIA_SOURCE: ${{ inputs.media_source }}
+          INPUT_REFERENCE_IMAGE_B64: ${{ inputs.reference_image_b64 }}
           INPUT_CAPTIONS: ${{ inputs.captions }}
           INPUT_CAPTION_FONT: ${{ inputs.caption_font }}
           INPUT_CAPTION_SIZE: ${{ inputs.caption_size }}
@@ -74,7 +78,7 @@ jobs:
           INPUT_MUSIC_VOLUME: ${{ inputs.music_volume }}
         run: |
           python scripts/apply_render_policies.py
-          python scripts/generate_turbo_v2.py
+          python scripts/generate_entry.py
           python scripts/validate_religious_media.py
           python scripts/normalize_duration.py
           python scripts/prepare_output_name.py

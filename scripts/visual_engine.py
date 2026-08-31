@@ -93,6 +93,18 @@ def build_prompt(scene,visual_context='',style='classic-2d',niche='custom',idx=0
         desc+=' show the biblical environment and other people indirectly, without portraying an identifiable central divine figure'
     context=clean_text(visual_context)
     camera=CAMERAS[idx%len(CAMERAS)]
+    if niche=='analog-horror':
+        prompt=[
+            desc,
+            'single coherent frame from the same fictional analog archive tape, polished retro-surreal institutional broadcast illustration',
+            'central 4:3 broadcast-safe composition inside a vertical canvas, CRT scanlines, VHS tracking damage, red black and gray palette, simple readable shapes',
+            f'locked tape continuity: {context[:1100]}',
+            'show only the named location, recurring subject, threat and action required by this scene; no unrelated people, objects, buildings, symbols or generic horror imagery',
+            'no generic spooky hallway unless explicitly required, no gore, no watermark, no logo, no illegible decorative text',
+        ]
+        if has_reference:
+            prompt.append('the reference is the immediately previous frame of this exact tape; preserve the same subject identity, institution, location, props, palette and threat design, changing only the current action and camera framing')
+        return '. '.join(x.strip(' .') for x in prompt if x).strip()+'.'
     prompt=[
         desc,
         _style_text(style,realistic),

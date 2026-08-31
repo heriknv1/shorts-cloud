@@ -70,7 +70,7 @@ def make_extra_audio(total,scene_durs,pace,sfx_mode,ambience_mode,niche):
     rng=np.random.default_rng(abs(hash((os.getenv('GITHUB_RUN_ID',''),niche)))%(2**32))
     if ambience_mode!='off':
         t=np.arange(n,dtype=np.float32)/sr
-        base={'horror':43.0,'horror-real':47.0,'science':82.0,'biblical':55.0,'devotional':65.0,'motivation':72.0}.get(niche,58.0)
+        base={'horror':43.0,'horror-real':47.0,'analog-horror':49.0,'science':82.0,'biblical':55.0,'devotional':65.0,'motivation':72.0}.get(niche,58.0)
         audio += .0045*np.sin(2*np.pi*base*t)+.0023*np.sin(2*np.pi*(base*1.51)*t)
         # Sparse random anchors interpolated over time create a soft room-like texture cheaply.
         step=2400
@@ -78,6 +78,11 @@ def make_extra_audio(total,scene_durs,pace,sfx_mode,ambience_mode,niche):
         fp=rng.normal(0,1,len(xp)).astype(np.float32)
         smooth=np.interp(np.arange(n,dtype=np.int64),xp,fp).astype(np.float32)
         audio += .0025*smooth
+        if niche=='analog-horror':
+            audio += .0048*rng.normal(0,1,n).astype(np.float32)
+            for when in np.arange(5.0,total,8.5):
+                start=int(when*sr);ln=min(int(.11*sr),n-start)
+                if ln>0: audio[start:start+ln]+=.025*rng.normal(0,1,ln).astype(np.float32)*np.exp(-np.linspace(0,5,ln,dtype=np.float32))
     if sfx_mode!='off':
         strength=.030 if sfx_mode=='subtle' else .055
         boundaries=[];c=0.0
@@ -99,19 +104,23 @@ def make_extra_audio(total,scene_durs,pace,sfx_mode,ambience_mode,niche):
     return path
 
 
-def video_filter(pace,brand_text):
+def video_filter(pace,brand_text,niche='custom'):
     interval={'fast':1.7,'balanced':2.2,'cinematic':3.0}.get(pace,2.2)
     x=f"54+24*sin(floor(t/{interval})*1.7)+8*sin(t*0.7)"
     y=f"96+38*cos(floor(t/{interval})*1.3)+10*sin(t*0.45)"
     filters=[f"scale=1188:2112,crop=1080:1920:x='{x}':y='{y}'"]
+    if niche=='analog-horror':
+        filters += ["crop=1080:810:0:555","scale=960:720","pad=1080:1920:60:600:black","eq=contrast=1.22:brightness=-0.075:saturation=0.38:gamma=0.92","colorbalance=rs=.14:gs=-.05:bs=-.09","noise=alls=9:allf=t+u","drawgrid=width=iw:height=4:thickness=1:color=black@0.16","fps=24","drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf:text='PLAY  ARCHIVE':fontcolor=white@0.62:fontsize=23:x=42:y=560:box=1:boxcolor=black@0.18"]
+        if os.getenv('INPUT_CAPTIONS','on')=='on':
+            filters.append("subtitles=output/captions.srt:force_style='FontName=DejaVu Sans Mono,FontSize=18,PrimaryColour=&H00E6E6E6,OutlineColour=&H00000000,BorderStyle=3,Outline=1,Shadow=0,Alignment=2,MarginV=210'")
     if brand_text:
         textfile=WORK/'brand.txt';textfile.write_text(brand_text,encoding='utf-8')
         filters.append("drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:textfile=work_turbo/brand.txt:fontcolor=white@0.55:fontsize=24:borderw=1:bordercolor=black@0.25:x=w-tw-38:y=42")
     return ','.join(filters)
 
 
-def finish_video(source,dest,total,extra,pace,brand_text):
-    vf=video_filter(pace,brand_text)
+def finish_video(source,dest,total,extra,pace,brand_text,niche='custom'):
+    vf=video_filter(pace,brand_text,niche)
     if extra:
         run(['ffmpeg','-y','-i',str(source),'-i',str(extra),'-filter_complex','[0:a][1:a]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[a]','-vf',vf,'-map','0:v','-map','[a]','-t',f'{total:.3f}','-c:v','libx264','-preset','veryfast','-crf','21','-c:a','aac','-b:a','192k','-movflags','+faststart',str(dest)])
     else:
@@ -134,6 +143,7 @@ def main():
     if not final.exists(): raise SystemExit('Vídeo final ausente para acabamento.')
     total=float(os.getenv('INPUT_DURATION','65'))
     plan=json.loads(os.getenv('INPUT_PLAN_JSON','{}'))
+    niche=plan.get('niche_key') or os.getenv('INPUT_NICHE_KEY','custom')
     pace=os.getenv('INPUT_EDITING_PACE','balanced')
     sfx=os.getenv('INPUT_SFX_MODE','subtle')
     ambience=os.getenv('INPUT_AMBIENCE_MODE','subtle')
@@ -141,13 +151,13 @@ def main():
     brand_text=os.getenv('INPUT_BRAND_TEXT','').strip()[:48] if brand else ''
     clean=os.getenv('INPUT_CLEAN_EXPORT','on')=='on'
     durs=scene_durations(plan,total)
-    extra=make_extra_audio(total,durs,pace,sfx,ambience,os.getenv('INPUT_NICHE_KEY','custom'))
+    extra=make_extra_audio(total,durs,pace,sfx,ambience,niche)
     write_srt(plan,total)
     source=WORK/'final_before_dynamic.mp4';final.replace(source)
-    finish_video(source,final,total,extra,pace,brand_text)
+    finish_video(source,final,total,extra,pace,brand_text,niche)
     if clean and os.getenv('INPUT_CAPTIONS','on')=='on':
         base=build_clean_base(total)
-        if base: finish_video(base,OUT/'final_sem_legenda.mp4',total,extra,pace,brand_text)
+        if base: finish_video(base,OUT/'final_sem_legenda.mp4',total,extra,pace,brand_text,niche)
     meta_path=OUT/'metadata.json'
     try: meta=json.loads(meta_path.read_text(encoding='utf-8'))
     except Exception: meta={}

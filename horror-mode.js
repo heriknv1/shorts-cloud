@@ -36,7 +36,7 @@
   window.fetch=async function(input,init){
     const originalUrl=typeof input==='string'?input:input?.url||'';let target=input,nextInit=init;
     if(horrorMode&&init?.method==='POST'){
-      if(originalUrl.includes('/api/plan'))target=isReal()?'/api/horror-real-plan':'/api/horror-plan';
+      if(originalUrl.includes('/api/plan'))target='/api/horror-plan';
       else if(originalUrl.includes('/api/scene-query'))target='/api/horror-scene-query';
       if(originalUrl.includes('/api/plan')||originalUrl.includes('/api/scene-query')||originalUrl.includes('/api/generate'))nextInit={...init,body:patchBody(init.body,originalUrl)};
     }

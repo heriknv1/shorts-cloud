@@ -4,7 +4,6 @@
   const $=id=>document.getElementById(id);
   let current=null;
 
-  function safe(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
   function save(data){current=data;try{localStorage.setItem(STORAGE,JSON.stringify(data))}catch{}}
   function load(){try{return JSON.parse(localStorage.getItem(STORAGE)||'null')}catch{return null}}
   async function copy(text,button){
@@ -28,6 +27,7 @@
     if($('socialTikTok'))$('socialTikTok').value=data.tiktok||'';
     if($('socialInstagram'))$('socialInstagram').value=data.instagram||'';
     if($('socialHashtags'))$('socialHashtags').value=(data.hashtags||[]).join(' ');
+    if($('socialPinned'))$('socialPinned').value=data.pinned_comment||'';
     const open=$('openSocialStage');if(open){open.hidden=false;open.textContent='Abrir textos para redes sociais'}
   }
   function inject(){
@@ -43,7 +43,8 @@
         <div class="social-copy-card"><div class="social-copy-head"><div><span class="eyebrow">TikTok</span><h3>Legenda pronta</h3></div><button class="ghost social-copy-btn" data-target="socialTikTok">Copiar</button></div><textarea id="socialTikTok" rows="8" readonly></textarea></div>
         <div class="social-copy-card"><div class="social-copy-head"><div><span class="eyebrow">Instagram Reels</span><h3>Legenda pronta</h3></div><button class="ghost social-copy-btn" data-target="socialInstagram">Copiar</button></div><textarea id="socialInstagram" rows="10" readonly></textarea></div>
         <div class="social-copy-card"><div class="social-copy-head"><div><span class="eyebrow">Hashtags</span><h3>Hashtags recomendadas</h3></div><button class="ghost social-copy-btn" data-target="socialHashtags">Copiar</button></div><textarea id="socialHashtags" rows="3" readonly></textarea></div>
-        <div class="notice">Os textos são adaptados ao assunto do vídeo para despertar curiosidade sem prometer resultados ou usar hashtags sem relação com o conteúdo.</div>
+        <div class="social-copy-card"><div class="social-copy-head"><div><span class="eyebrow">Engajamento</span><h3>Comentário fixado sugerido</h3></div><button class="ghost social-copy-btn" data-target="socialPinned">Copiar</button></div><textarea id="socialPinned" rows="3" readonly></textarea></div>
+        <div class="notice">Os textos são adaptados ao conteúdo para despertar curiosidade de forma coerente e incentivar conversa genuína.</div>
       </div><div class="stage-actions"><button class="ghost" id="socialBack">Voltar para geração</button><span></span></div>`;
       workspace.appendChild(stage);
       stage.querySelectorAll('.social-copy-btn').forEach(b=>b.addEventListener('click',()=>copy($(b.dataset.target)?.value,b)));

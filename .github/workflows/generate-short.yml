@@ -103,6 +103,8 @@ jobs:
           INPUT_DURATION: ${{ inputs.duration }}
           INPUT_NICHE_KEY: ${{ inputs.niche_key }}
           INPUT_CAPTIONS: ${{ inputs.captions }}
+          INPUT_CAPTION_FONT: ${{ inputs.caption_font }}
+          INPUT_CAPTION_SIZE: ${{ inputs.caption_size }}
           INPUT_MUSIC_VOLUME: ${{ inputs.music_volume }}
           INPUT_EDITING_PACE: ${{ inputs.editing_pace }}
           INPUT_SFX_MODE: ${{ inputs.sfx_mode }}

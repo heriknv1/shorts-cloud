@@ -8,6 +8,7 @@ from PIL import Image
 
 import generate_turbo_v2 as turbo
 import flux_runtime
+import media_history
 import natural_voice
 import visual_engine
 
@@ -48,9 +49,10 @@ def strict_reference_image(reference_path):
         del used_photo
         out=WORK/f'reference_generated_{idx:02d}.jpg'
         base=' '.join(str(scene.get(k,'')) for k in ('visual_description','visual_query','narration'))
-        seed=int(hashlib.sha256((base+str(idx)+str(visual_context)+'reference').encode('utf-8')).hexdigest()[:8],16)
+        run_salt=os.getenv('GITHUB_RUN_ID') or os.getenv('INPUT_REQUEST_ID') or os.urandom(8).hex()
+        seed=int(hashlib.sha256((base+str(idx)+str(visual_context)+'reference'+run_salt).encode('utf-8')).hexdigest()[:8],16)
         prompt=visual_engine.build_prompt(scene,visual_context,style,niche,idx,realistic,True)
-        prompt+=' Use the supplied reference image as the actual visual source for identity, subject appearance, product/object design, colors and distinguishing features whenever applicable. Do not replace it with a merely similar subject.'
+        prompt+=' Use the supplied reference image as the actual visual source for identity, subject appearance, product/object design, colors and distinguishing features whenever applicable. Create a fresh composition for this exact narration scene.'
         ok=visual_engine.cf_klein(prompt,out,seed,reference_path)
         if not ok or not out.exists() or out.stat().st_size<20000:
             raise RuntimeError('Não foi possível gerar esta cena diretamente a partir da foto de referência. Tente novamente quando o motor visual estiver disponível.')
@@ -61,6 +63,7 @@ def strict_reference_image(reference_path):
 def install_runtime():
     flux_runtime.install()
     turbo.synthesize=natural_voice.synthesize
+    media_history.install(turbo)
     print('Motores de imagem e narração preparados.',flush=True)
 
 
@@ -69,6 +72,7 @@ def main():
     mode=os.getenv('INPUT_MEDIA_SOURCE','auto').strip().lower()
     if mode!='reference':
         turbo.main()
+        media_history.save()
         return
     reference=prepare_reference()
     if not (visual_engine.CF_ACCOUNT_ID and visual_engine.CF_API_TOKEN):
@@ -77,6 +81,7 @@ def main():
     turbo.pexels_video=lambda queries,used:(None,None,'')
     turbo.pexels_photo=lambda queries,used:(None,None,'')
     turbo.main()
+    media_history.save()
 
 
 if __name__=='__main__':

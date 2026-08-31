@@ -51,6 +51,7 @@ jobs:
       - name: Gerar mídia e montar vídeo
         env:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           PIPER_MODEL_PATH: models/pt_BR-faber-medium.onnx
           INPUT_VOICE: ${{ inputs.voice }}
           INPUT_VOICE_PITCH: ${{ inputs.voice_pitch }}
@@ -71,6 +72,7 @@ jobs:
         run: |
           python scripts/apply_render_policies.py
           python scripts/generate_turbo.py
+          python scripts/validate_religious_media.py
           python scripts/normalize_duration.py
           python scripts/prepare_output_name.py
       - name: Validar vídeo
@@ -83,15 +85,11 @@ jobs:
           import json,os,subprocess,sys
           video='output/'+open('output/video_name.txt',encoding='utf-8').read().strip()
           data=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',video],text=True))
-          streams=data.get('streams',[])
-          v=next((s for s in streams if s.get('codec_type')=='video'),None)
-          a=next((s for s in streams if s.get('codec_type')=='audio'),None)
-          dur=float(data.get('format',{}).get('duration') or 0)
-          target=float(os.environ['TARGET_DURATION'])
-          if not v or int(v.get('width',0))!=1080 or int(v.get('height',0))!=1920: sys.exit('Resolução final inválida')
-          if not a: sys.exit('Áudio final ausente')
-          if abs(dur-target)>0.75: sys.exit(f'Duração final inválida: {dur:.2f}s')
-          if int(data.get('format',{}).get('size') or 0)<500000: sys.exit('Arquivo final pequeno demais')
+          streams=data.get('streams',[]);v=next((s for s in streams if s.get('codec_type')=='video'),None);a=next((s for s in streams if s.get('codec_type')=='audio'),None);dur=float(data.get('format',{}).get('duration') or 0);target=float(os.environ['TARGET_DURATION'])
+          if not v or int(v.get('width',0))!=1080 or int(v.get('height',0))!=1920:sys.exit('Resolução final inválida')
+          if not a:sys.exit('Áudio final ausente')
+          if abs(dur-target)>0.75:sys.exit(f'Duração final inválida: {dur:.2f}s')
+          if int(data.get('format',{}).get('size') or 0)<500000:sys.exit('Arquivo final pequeno demais')
           print(f'Vídeo validado: 1080x1920, {dur:.2f}s, áudio presente')
           PY
       - name: Guardar vídeo

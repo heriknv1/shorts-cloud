@@ -21,6 +21,12 @@ on:
       caption_size: { description: Tamanho da fonte, required: true, default: "56", type: string }
       music: { description: Trilha, required: true, default: "off", type: string }
       music_volume: { description: Volume, required: true, default: medium, type: string }
+      editing_pace: { description: Ritmo da edição, required: true, default: balanced, type: string }
+      sfx_mode: { description: Efeitos sonoros, required: true, default: subtle, type: string }
+      ambience_mode: { description: Ambiência, required: true, default: subtle, type: string }
+      clean_export: { description: Versão sem legenda, required: true, default: "on", type: string }
+      branding_mode: { description: Assinatura visual, required: true, default: "off", type: string }
+      brand_text: { description: Nome do canal, required: false, type: string }
       request_id: { description: ID, required: false, type: string }
 permissions:
   contents: write
@@ -86,10 +92,18 @@ jobs:
           INPUT_CAPTION_SIZE: ${{ inputs.caption_size }}
           INPUT_MUSIC: ${{ inputs.music }}
           INPUT_MUSIC_VOLUME: ${{ inputs.music_volume }}
+          INPUT_EDITING_PACE: ${{ inputs.editing_pace }}
+          INPUT_SFX_MODE: ${{ inputs.sfx_mode }}
+          INPUT_AMBIENCE_MODE: ${{ inputs.ambience_mode }}
+          INPUT_CLEAN_EXPORT: ${{ inputs.clean_export }}
+          INPUT_BRANDING_MODE: ${{ inputs.branding_mode }}
+          INPUT_BRAND_TEXT: ${{ inputs.brand_text }}
         run: |
           python scripts/apply_render_policies.py
           python scripts/generate_entry.py
           python scripts/validate_religious_media.py
+          python scripts/normalize_duration.py
+          python scripts/dynamic_finish.py
           python scripts/normalize_duration.py
           python scripts/prepare_output_name.py
       - name: Validar vídeo
@@ -119,6 +133,7 @@ jobs:
           name: short-cloud-${{ github.run_id }}
           path: |
             output/*.mp4
+            output/*.srt
             output/video_name.txt
             output/media_usage.json
           retention-days: 2
@@ -131,4 +146,7 @@ jobs:
           VIDEO="output/$(cat output/video_name.txt)"
           USAGE=$(python -c "import base64,pathlib; p=pathlib.Path('output/media_usage.json'); print(base64.b64encode((p.read_bytes() if p.exists() else b'{}')).decode())")
           printf 'Vídeo pronto.\n\nMEDIA_USAGE_B64:%s\n' "$USAGE" > output/release_notes.txt
-          gh release create "short-${GITHUB_RUN_ID}" "$VIDEO" --title "$TITLE" --notes-file output/release_notes.txt
+          EXTRA=()
+          test -s output/final_sem_legenda.mp4 && EXTRA+=(output/final_sem_legenda.mp4)
+          test -s output/captions.srt && EXTRA+=(output/captions.srt)
+          gh release create "short-${GITHUB_RUN_ID}" "$VIDEO" "${EXTRA[@]}" --title "$TITLE" --notes-file output/release_notes.txt

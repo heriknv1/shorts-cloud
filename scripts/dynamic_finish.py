@@ -104,23 +104,25 @@ def make_extra_audio(total,scene_durs,pace,sfx_mode,ambience_mode,niche):
     return path
 
 
-def video_filter(pace,brand_text,niche='custom'):
+def video_filter(pace,brand_text,niche='custom',include_captions=True):
     interval={'fast':1.7,'balanced':2.2,'cinematic':3.0}.get(pace,2.2)
     x=f"54+24*sin(floor(t/{interval})*1.7)+8*sin(t*0.7)"
     y=f"96+38*cos(floor(t/{interval})*1.3)+10*sin(t*0.45)"
     filters=[f"scale=1188:2112,crop=1080:1920:x='{x}':y='{y}'"]
     if niche=='analog-horror':
         filters += ["crop=1080:810:0:555","scale=960:720","pad=1080:1920:60:600:black","eq=contrast=1.22:brightness=-0.075:saturation=0.38:gamma=0.92","colorbalance=rs=.14:gs=-.05:bs=-.09","noise=alls=9:allf=t+u","drawgrid=width=iw:height=4:thickness=1:color=black@0.16","fps=24","drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf:text='PLAY  ARCHIVE':fontcolor=white@0.62:fontsize=23:x=42:y=560:box=1:boxcolor=black@0.18"]
-        if os.getenv('INPUT_CAPTIONS','on')=='on':
-            filters.append("subtitles=output/captions.srt:force_style='FontName=DejaVu Sans Mono,FontSize=18,PrimaryColour=&H00E6E6E6,OutlineColour=&H00000000,BorderStyle=3,Outline=1,Shadow=0,Alignment=2,MarginV=210'")
+        if include_captions and os.getenv('INPUT_CAPTIONS','on')=='on':
+            font=''.join(c for c in os.getenv('INPUT_CAPTION_FONT','Montserrat') if c.isalnum() or c in ' _-')[:50] or 'Montserrat'
+            size=max(36,min(92,int(os.getenv('INPUT_CAPTION_SIZE','56'))))
+            filters.append(f"subtitles=output/captions.srt:force_style='FontName={font},FontSize={size},PrimaryColour=&H00FFFFFF,OutlineColour=&H00101010,BackColour=&H99000000,BorderStyle=3,Outline=2,Shadow=0,Alignment=2,MarginL=72,MarginR=72,MarginV=120'")
     if brand_text:
         textfile=WORK/'brand.txt';textfile.write_text(brand_text,encoding='utf-8')
         filters.append("drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:textfile=work_turbo/brand.txt:fontcolor=white@0.55:fontsize=24:borderw=1:bordercolor=black@0.25:x=w-tw-38:y=42")
     return ','.join(filters)
 
 
-def finish_video(source,dest,total,extra,pace,brand_text,niche='custom'):
-    vf=video_filter(pace,brand_text,niche)
+def finish_video(source,dest,total,extra,pace,brand_text,niche='custom',include_captions=True):
+    vf=video_filter(pace,brand_text,niche,include_captions)
     if extra:
         run(['ffmpeg','-y','-i',str(source),'-i',str(extra),'-filter_complex','[0:a][1:a]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[a]','-vf',vf,'-map','0:v','-map','[a]','-t',f'{total:.3f}','-c:v','libx264','-preset','veryfast','-crf','21','-c:a','aac','-b:a','192k','-movflags','+faststart',str(dest)])
     else:
@@ -154,10 +156,13 @@ def main():
     extra=make_extra_audio(total,durs,pace,sfx,ambience,niche)
     write_srt(plan,total)
     source=WORK/'final_before_dynamic.mp4';final.replace(source)
+    if niche=='analog-horror':
+        clean_source=build_clean_base(total)
+        if clean_source: source=clean_source
     finish_video(source,final,total,extra,pace,brand_text,niche)
     if clean and os.getenv('INPUT_CAPTIONS','on')=='on':
         base=build_clean_base(total)
-        if base: finish_video(base,OUT/'final_sem_legenda.mp4',total,extra,pace,brand_text,niche)
+        if base: finish_video(base,OUT/'final_sem_legenda.mp4',total,extra,pace,brand_text,niche,include_captions=False)
     meta_path=OUT/'metadata.json'
     try: meta=json.loads(meta_path.read_text(encoding='utf-8'))
     except Exception: meta={}

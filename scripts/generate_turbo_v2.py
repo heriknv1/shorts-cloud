@@ -314,6 +314,9 @@ def choose_image(scene,idx,style,niche,visual_context,realistic,reference,used_p
     source=generate_scene_image(scene,img,visual_context,style,niche,idx,realistic,reference)
     if source and img.exists() and img.stat().st_size>20000:
         return img,source
+    if niche=='analog-horror':
+        procedural_scene(scene,img,'retro-surreal',niche,idx)
+        return img,'analog-procedural-fallback'
     queries=stock_queries(scene,niche)
     pid,url,q=pexels_photo(queries,used_photo)
     if url:
@@ -333,9 +336,13 @@ def main():
     if len(scenes)<6:
         raise RuntimeError('plano com poucas cenas')
     style=os.getenv('INPUT_CARTOON_STYLE','classic-2d')
-    niche=os.getenv('INPUT_NICHE_KEY','custom')
+    niche=str(plan.get('niche_key') or os.getenv('INPUT_NICHE_KEY','custom'))
     visual=os.getenv('INPUT_VISUAL_STYLE','realistic')
     media_mode=os.getenv('INPUT_MEDIA_MODE','hybrid')
+    if niche=='analog-horror':
+        style='retro-surreal'
+        visual='cartoon'
+        media_mode='photos'
     captions=os.getenv('INPUT_CAPTIONS','on')
     music=os.getenv('INPUT_MUSIC','off')
     voice=os.getenv('INPUT_VOICE','pt-BR-FranciscaNeural')
@@ -371,7 +378,7 @@ def main():
         if visual=='cartoon':
             img,source=choose_image(scene,i,style,niche,visual_context,False,last_generated,used_photo)
             render_image(img,clip,dur,i)
-            if source.startswith('generated'):
+            if source.startswith(('generated','analog-')):
                 last_generated=img
             sources.append({'scene':i+1,'type':'generated-illustration','source':source})
         else:
@@ -390,13 +397,13 @@ def main():
                 if not url:
                     img,source=choose_image(scene,i,style,niche,visual_context,True,last_generated,used_photo)
                     render_image(img,clip,dur,i)
-                    if source.startswith('generated'):
+                    if source.startswith(('generated','analog-')):
                         last_generated=img
                     sources.append({'scene':i+1,'type':'generated-motion','source':source})
             else:
                 img,source=choose_image(scene,i,style,niche,visual_context,True,last_generated,used_photo)
                 render_image(img,clip,dur,i)
-                if source.startswith('generated'):
+                if source.startswith(('generated','analog-')):
                     last_generated=img
                 sources.append({'scene':i+1,'type':'generated-image','source':source})
         clips.append(clip)

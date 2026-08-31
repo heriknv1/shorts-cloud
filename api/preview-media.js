@@ -11,6 +11,7 @@ const PREVIEWS = {
   motivation: {url:'https://images.unsplash.com/photo-1758922769578-68c5ba000d87?auto=format&fit=crop&w=700&h=1244&q=85',alt:'Atleta correndo ao nascer do sol para conteúdo motivacional'},
   science: {url:'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=700&h=1244&q=85',alt:'Imagem relacionada a exploração espacial e ciência'},
   'true-stories': {url:'https://images.unsplash.com/photo-1769803836405-eab099288cc9?auto=format&fit=crop&w=700&h=1244&q=85',alt:'Retrato documental de uma pessoa real em ambiente urbano'},
+  'unknown-facts': {url:'https://images.unsplash.com/photo-1452421822248-d4c2b47f0c81?auto=format&fit=crop&w=700&h=1244&q=85',alt:'Mapa histórico e objetos de investigação para fatos reais pouco conhecidos'},
   animals: {url:'https://images.unsplash.com/photo-1474511320723-9a56873867b5?auto=format&fit=crop&w=700&h=1244&q=85',alt:'Animal selvagem em ambiente natural'},
   custom: {url:'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=700&h=1244&q=85',alt:'Paisagem cinematográfica para pré-visualização'}
 };

@@ -6,6 +6,7 @@ const PREVIEWS = {
   mysteries: {url:'https://images.unsplash.com/photo-1748418647784-e016efb1acd1?auto=format&fit=crop&w=700&h=1244&q=85',alt:'Floresta coberta por neblina para histórias de mistério'},
   horror: {url:'https://images.unsplash.com/photo-1509248961158-e54f6934749c?auto=format&fit=crop&w=700&h=1244&q=85',alt:'Corredor escuro com iluminação dramática para terror e suspense'},
   'horror-real': {url:'https://images.unsplash.com/photo-1519074069444-1ba4fff66d16?auto=format&fit=crop&w=700&h=1244&q=85',alt:'Ambiente documental sombrio para contos reais de terror'},
+  'analog-horror': {url:'https://images.unsplash.com/photo-1586899028174-e7098604235b?auto=format&fit=crop&w=700&h=1244&q=85',alt:'Televisão antiga em ambiente escuro para terror analógico VHS'},
   ancient: {url:'https://images.unsplash.com/photo-1755071158506-00fda2beabfa?auto=format&fit=crop&w=700&h=1244&q=85',alt:'Ruínas de templo antigo ao pôr do sol'},
   'life-lessons': {url:'https://images.unsplash.com/photo-1781988838537-a641ded373e1?auto=format&fit=crop&w=700&h=1244&q=85',alt:'Pessoa contemplando o pôr do sol para reflexão e lições de vida'},
   motivation: {url:'https://images.unsplash.com/photo-1758922769578-68c5ba000d87?auto=format&fit=crop&w=700&h=1244&q=85',alt:'Atleta correndo ao nascer do sol para conteúdo motivacional'},

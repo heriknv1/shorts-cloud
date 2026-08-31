@@ -11,6 +11,7 @@ import flux_runtime
 import media_history
 import natural_voice
 import visual_engine
+import voice_speed_runtime
 
 ROOT=Path(__file__).resolve().parents[1]
 WORK=ROOT/'work_turbo'
@@ -62,6 +63,7 @@ def strict_reference_image(reference_path):
 
 def install_runtime():
     flux_runtime.install()
+    voice_speed_runtime.install(natural_voice)
     turbo.synthesize=natural_voice.synthesize
     media_history.install(turbo)
     original_generate=turbo.generate_scene_image

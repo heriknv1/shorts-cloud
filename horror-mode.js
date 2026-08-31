@@ -65,6 +65,7 @@
     try{
       const parsed=JSON.parse(body||'{}');
       parsed.presetKey='horror';
+      if(parsed.topic==='Criar uma história original de terror e suspense')parsed.topic='';
       return JSON.stringify(parsed);
     }catch{return body}
   }
@@ -75,16 +76,17 @@
     if(horrorSelected&&init?.method==='POST'){
       if(originalUrl.includes('/api/plan'))target='/api/horror-plan';
       else if(originalUrl.includes('/api/scene-query'))target='/api/horror-scene-query';
-      if(originalUrl.includes('/api/plan')||originalUrl.includes('/api/scene-query')||originalUrl.includes('/api/generate')){
-        nextInit={...init,body:patchBody(init.body)};
-      }
+      if(originalUrl.includes('/api/plan')||originalUrl.includes('/api/scene-query')||originalUrl.includes('/api/generate'))nextInit={...init,body:patchBody(init.body)};
     }
     return nativeFetch(target,nextInit);
   };
 
   function boot(){
     injectPreset();
-    ['visualStyle','mediaMode','cartoonStyle'].forEach(id=>$(id)?.addEventListener('change',()=>setTimeout(syncHorrorPreview,0)));
+    $('planBtn')?.addEventListener('click',()=>{
+      if(horrorSelected&&!$('topic')?.value.trim())$('topic').value='Criar uma história original de terror e suspense';
+    },true);
+    ['visualStyle','mediaMode','cartoonStyle','captionFont','captionSize','captions','voicePitch','voiceSpeed','music','musicVolume'].forEach(id=>$(id)?.addEventListener('change',()=>setTimeout(syncHorrorPreview,0)));
     document.addEventListener('change',e=>{if(e.target?.id==='mediaSource')setTimeout(syncHorrorPreview,0)});
   }
 

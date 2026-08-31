@@ -92,6 +92,18 @@ jobs:
           INPUT_CAPTION_SIZE: ${{ inputs.caption_size }}
           INPUT_MUSIC: ${{ inputs.music }}
           INPUT_MUSIC_VOLUME: ${{ inputs.music_volume }}
+        run: |
+          python scripts/apply_render_policies.py
+          python scripts/generate_entry.py
+          python scripts/validate_religious_media.py
+          python scripts/normalize_duration.py
+      - name: Aplicar edição dinâmica
+        env:
+          INPUT_PLAN_JSON: ${{ inputs.plan_json }}
+          INPUT_DURATION: ${{ inputs.duration }}
+          INPUT_NICHE_KEY: ${{ inputs.niche_key }}
+          INPUT_CAPTIONS: ${{ inputs.captions }}
+          INPUT_MUSIC_VOLUME: ${{ inputs.music_volume }}
           INPUT_EDITING_PACE: ${{ inputs.editing_pace }}
           INPUT_SFX_MODE: ${{ inputs.sfx_mode }}
           INPUT_AMBIENCE_MODE: ${{ inputs.ambience_mode }}
@@ -99,10 +111,6 @@ jobs:
           INPUT_BRANDING_MODE: ${{ inputs.branding_mode }}
           INPUT_BRAND_TEXT: ${{ inputs.brand_text }}
         run: |
-          python scripts/apply_render_policies.py
-          python scripts/generate_entry.py
-          python scripts/validate_religious_media.py
-          python scripts/normalize_duration.py
           python scripts/dynamic_finish.py
           python scripts/normalize_duration.py
           python scripts/prepare_output_name.py

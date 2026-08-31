@@ -7,6 +7,8 @@ from pathlib import Path
 from PIL import Image
 
 import generate_turbo_v2 as turbo
+import flux_runtime
+import natural_voice
 import visual_engine
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -52,11 +54,18 @@ def strict_reference_image(reference_path):
         ok=visual_engine.cf_klein(prompt,out,seed,reference_path)
         if not ok or not out.exists() or out.stat().st_size<20000:
             raise RuntimeError('Não foi possível gerar esta cena diretamente a partir da foto de referência. Tente novamente quando o motor visual estiver disponível.')
-        return out,'generated-reference-flux2-klein'
+        return out,'generated-reference-primary'
     return choose_image
 
 
+def install_runtime():
+    flux_runtime.install()
+    turbo.synthesize=natural_voice.synthesize
+    print('Motores de imagem e narração preparados.',flush=True)
+
+
 def main():
+    install_runtime()
     mode=os.getenv('INPUT_MEDIA_SOURCE','auto').strip().lower()
     if mode!='reference':
         turbo.main()

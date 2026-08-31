@@ -28,6 +28,7 @@
       <div><label for="editingPace">Ritmo da edição</label><select id="editingPace"><option value="balanced" selected>Dinâmica equilibrada</option><option value="fast">Cortes rápidos</option><option value="cinematic">Cinematográfica</option></select></div>
       <div><label for="sfxMode">Efeitos sonoros</label><select id="sfxMode"><option value="subtle" selected>Discretos</option><option value="dynamic">Mais presentes</option><option value="off">Desativados</option></select></div>
       <div><label for="ambienceMode">Ambiência</label><select id="ambienceMode"><option value="subtle" selected>Leve e contextual</option><option value="off">Desativada</option></select></div>
+      <div><label for="cleanExport">Versão extra sem legenda</label><select id="cleanExport"><option value="on" selected>Sim — para usar legenda nativa da rede</option><option value="off">Não</option></select></div>
       <div><label for="brandingMode">Assinatura visual</label><select id="brandingMode"><option value="off" selected>Desativada</option><option value="on">Ativada</option></select></div>
       <div id="brandTextWrap" hidden><label for="brandText">Nome do canal</label><input id="brandText" maxlength="48" placeholder="Ex.: Histórias em 1 Minuto"></div>`;
     const holder=document.createElement('div');holder.style.display='contents';holder.innerHTML=html;while(holder.firstChild)grid.appendChild(holder.firstChild);
@@ -46,6 +47,7 @@
       data.editingPace=value('editingPace','balanced');
       data.sfxMode=value('sfxMode','subtle');
       data.ambienceMode=value('ambienceMode','subtle');
+      data.cleanExport=value('cleanExport','on');
       data.brandingMode=value('brandingMode','off');
       data.brandText=data.brandingMode==='on'?String(value('brandText','')).trim().slice(0,48):'';
       return JSON.stringify(data);

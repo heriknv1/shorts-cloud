@@ -13,7 +13,7 @@ on:
       media_mode: { description: Mídia, required: true, default: hybrid, type: string }
       media_source: { description: Origem visual, required: true, default: auto, type: string }
       reference_image_b64: { description: Referência visual compactada, required: false, type: string }
-      voice: { description: Voz, required: true, default: pt-BR-FranciscaNeural, type: string }
+      voice: { description: Voz, required: true, default: gemini:Sulafat, type: string }
       voice_pitch: { description: Tom da voz, required: true, default: default, type: string }
       voice_speed: { description: Velocidade da voz, required: true, default: default, type: string }
       captions: { description: Legendas, required: true, default: "on", type: string }
@@ -33,6 +33,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
+      - name: Preparar memória visual
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p work_turbo
+          gh release list --limit 100 --json body --jq '.[].body // ""' > work_turbo/media_history_notes.txt || true
       - name: Preparar Python
         uses: actions/setup-python@v5
         with:
@@ -60,6 +66,8 @@ jobs:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           PIPER_MODEL_PATH: models/pt_BR-faber-medium.onnx
+          MEDIA_HISTORY_NOTES_PATH: work_turbo/media_history_notes.txt
+          INPUT_REQUEST_ID: ${{ inputs.request_id }}
           INPUT_VOICE: ${{ inputs.voice }}
           INPUT_VOICE_PITCH: ${{ inputs.voice_pitch }}
           INPUT_VOICE_SPEED: ${{ inputs.voice_speed }}
@@ -112,6 +120,7 @@ jobs:
           path: |
             output/*.mp4
             output/video_name.txt
+            output/media_usage.json
           retention-days: 2
           compression-level: 0
       - name: Publicar vídeo
@@ -120,4 +129,6 @@ jobs:
         run: |
           TITLE=$(python -c "import json; print(json.load(open('output/metadata.json',encoding='utf-8')).get('title','Short Cloud Studio'))")
           VIDEO="output/$(cat output/video_name.txt)"
-          gh release create "short-${GITHUB_RUN_ID}" "$VIDEO" --title "$TITLE" --notes "Vídeo pronto."
+          USAGE=$(python -c "import base64,pathlib; p=pathlib.Path('output/media_usage.json'); print(base64.b64encode((p.read_bytes() if p.exists() else b'{}')).decode())")
+          printf 'Vídeo pronto.\n\nMEDIA_USAGE_B64:%s\n' "$USAGE" > output/release_notes.txt
+          gh release create "short-${GITHUB_RUN_ID}" "$VIDEO" --title "$TITLE" --notes-file output/release_notes.txt

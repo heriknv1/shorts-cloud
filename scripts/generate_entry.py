@@ -64,6 +64,13 @@ def install_runtime():
     flux_runtime.install()
     turbo.synthesize=natural_voice.synthesize
     media_history.install(turbo)
+    original_generate=turbo.generate_scene_image
+    run_salt=os.getenv('GITHUB_RUN_ID') or os.getenv('INPUT_REQUEST_ID') or os.urandom(8).hex()
+    def fresh_generate(scene,path,visual_context='',style='classic-2d',niche='custom',idx=0,realistic=True,reference=None):
+        fresh=dict(scene)
+        fresh['visual_query']=f"{scene.get('visual_query','')} fresh-take-{run_salt}-{idx}"
+        return original_generate(fresh,path,visual_context,style,niche,idx,realistic,reference)
+    turbo.generate_scene_image=fresh_generate
     print('Motores de imagem e narração preparados.',flush=True)
 
 

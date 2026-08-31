@@ -18,7 +18,7 @@ module.exports=async function handler(req,res){
   if(cleanPlan.scenes.some(s=>!s.narration))return res.status(400).json({error:'Uma ou mais cenas estão sem narração.'});const planJson=JSON.stringify(cleanPlan);if(planJson.length>56000)return res.status(400).json({error:'O plano ficou grande demais.'});
   const used=await usedToday();if(used>=DAILY_LIMIT)return res.status(429).json({error:`O limite configurado de ${DAILY_LIMIT} criações de hoje já foi usado.`,usedToday:used,remaining:0});const requestId=`studio-${Date.now()}`;
   await gh(`/repos/${repo}/actions/workflows/generate-short.yml/dispatches`,{method:'POST',body:JSON.stringify({ref:'main',inputs:{topic,plan_json:planJson,duration:String(duration),tone,niche_key:presetKey,visual_style:visualStyle,cartoon_style:cartoonStyle,media_mode:mediaMode,media_source:mediaSource,reference_image_b64:mediaSource==='reference'?referenceImageB64:'',voice,voice_pitch:voicePitch,voice_speed:voiceSpeed,captions,caption_font:captionFont,caption_size:String(captionSize),music,music_volume:musicVolume,request_id:requestId}})});
-  const engines={script:'Qwen 3.8 27B',visual:mediaSource==='reference'?'FLUX.2 Klein • referência obrigatória':'FLUX.2 Klein → FLUX.1 Schnell → auxiliar',voice:'Edge Neural → alternativa local'};
+  const engines={script:'Inteligência principal',visual:mediaSource==='reference'?'Criação visual por referência':'Criação visual inteligente com alternativas automáticas',voice:'Narração natural com alternativas automáticas'};
   return res.status(202).json({ok:true,requestId,usedToday:used,dailyLimit:DAILY_LIMIT,remaining:DAILY_LIMIT-used,engines,mediaSource});
  }catch(error){console.error(error);return res.status(500).json({error:'Falha ao iniciar geração.'})}
 };

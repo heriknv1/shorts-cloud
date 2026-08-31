@@ -1,0 +1,160 @@
+#!/usr/bin/env python3
+import json
+import math
+import os
+import subprocess
+from pathlib import Path
+
+import numpy as np
+import soundfile as sf
+
+ROOT=Path(__file__).resolve().parents[1]
+WORK=ROOT/'work_turbo'
+OUT=ROOT/'output'
+OUT.mkdir(exist_ok=True)
+WORK.mkdir(exist_ok=True)
+
+
+def run(cmd):
+    print('+',' '.join(map(str,cmd)),flush=True)
+    subprocess.run(cmd,check=True)
+
+
+def media_duration(path):
+    return float(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','default=noprint_wrappers=1:nokey=1',str(path)],text=True).strip())
+
+
+def scene_durations(plan,total):
+    files=sorted(WORK.glob('voice_??.wav'))
+    vals=[]
+    for p in files[:len(plan.get('scenes') or [])]:
+        try: vals.append(media_duration(p))
+        except Exception: vals=[];break
+    if len(vals)==len(plan.get('scenes') or []) and sum(vals)>0:
+        scale=total/sum(vals)
+        return [x*scale for x in vals]
+    count=max(1,len(plan.get('scenes') or []))
+    return [total/count]*count
+
+
+def srt_time(seconds):
+    ms=max(0,int(round(seconds*1000)))
+    h,ms=divmod(ms,3600000);m,ms=divmod(ms,60000);s,ms=divmod(ms,1000)
+    return f'{h:02d}:{m:02d}:{s:02d},{ms:03d}'
+
+
+def write_srt(plan,total):
+    scenes=plan.get('scenes') or []
+    durs=scene_durations(plan,total)
+    rows=[];cursor=0.0;idx=1
+    for scene,dur in zip(scenes,durs):
+        words=str(scene.get('narration') or '').split()
+        chunks=[]
+        cur=[]
+        for word in words:
+            cur.append(word)
+            if len(cur)>=7 or str(word).endswith(('.', '!', '?', '…')):
+                chunks.append(' '.join(cur));cur=[]
+        if cur: chunks.append(' '.join(cur))
+        if not chunks: chunks=['']
+        part=dur/len(chunks)
+        for text in chunks:
+            end=min(total,cursor+part)
+            rows += [str(idx),f'{srt_time(cursor)} --> {srt_time(end)}',text,'']
+            idx+=1;cursor=end
+    (OUT/'captions.srt').write_text('\n'.join(rows),encoding='utf-8')
+
+
+def make_extra_audio(total,scene_durs,pace,sfx_mode,ambience_mode,niche):
+    if sfx_mode=='off' and ambience_mode=='off': return None
+    sr=48000;n=max(1,int(total*sr));audio=np.zeros(n,dtype=np.float32)
+    rng=np.random.default_rng(abs(hash((os.getenv('GITHUB_RUN_ID',''),niche)))%(2**32))
+    if ambience_mode!='off':
+        t=np.arange(n,dtype=np.float32)/sr
+        base={'horror':43.0,'horror-real':47.0,'science':82.0,'biblical':55.0,'devotional':65.0,'motivation':72.0}.get(niche,58.0)
+        audio += .0045*np.sin(2*np.pi*base*t)+.0023*np.sin(2*np.pi*(base*1.51)*t)
+        noise=rng.normal(0,1,n).astype(np.float32)
+        kernel=np.ones(720,dtype=np.float32)/720
+        smooth=np.convolve(noise,kernel,mode='same')
+        audio += .0032*smooth
+    if sfx_mode!='off':
+        strength=.030 if sfx_mode=='subtle' else .055
+        boundaries=[];c=0.0
+        for d in scene_durs[:-1]: c+=d;boundaries.append(c)
+        interval={'fast':1.7,'balanced':2.2,'cinematic':3.0}.get(pace,2.2)
+        micro=np.arange(interval,total,interval)
+        events=[(x,strength) for x in boundaries]+[(float(x),strength*.35) for x in micro]
+        for when,amp in events:
+            start=int(when*sr);ln=min(int(.14*sr),n-start)
+            if ln<=0: continue
+            env=np.exp(-np.linspace(0,6,ln,dtype=np.float32))
+            noise=rng.normal(0,1,ln).astype(np.float32)
+            tone=np.sin(2*np.pi*np.linspace(180,70,ln,dtype=np.float32)*np.arange(ln,dtype=np.float32)/sr)
+            audio[start:start+ln]+=amp*(noise*.34+tone*.66)*env
+    peak=max(.001,float(np.max(np.abs(audio))))
+    if peak>.15: audio*=.15/peak
+    path=WORK/'creative_extra.wav';sf.write(path,audio,sr)
+    return path
+
+
+def video_filter(pace,brand_text):
+    interval={'fast':1.7,'balanced':2.2,'cinematic':3.0}.get(pace,2.2)
+    # Reframe subtly every interval while keeping continuous movement inside each segment.
+    x=f"54+24*sin(floor(t/{interval})*1.7)+8*sin(t*0.7)"
+    y=f"96+38*cos(floor(t/{interval})*1.3)+10*sin(t*0.45)"
+    filters=[f"scale=1188:2112,crop=1080:1920:x='{x}':y='{y}'"]
+    if brand_text:
+        textfile=WORK/'brand.txt';textfile.write_text(brand_text,encoding='utf-8')
+        filters.append("drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:textfile=work_turbo/brand.txt:fontcolor=white@0.55:fontsize=24:borderw=1:bordercolor=black@0.25:x=w-tw-38:y=42")
+    return ','.join(filters)
+
+
+def finish_video(source,dest,total,extra,pace,brand_text):
+    vf=video_filter(pace,brand_text)
+    if extra:
+        run(['ffmpeg','-y','-i',str(source),'-i',str(extra),'-filter_complex',f'[0:a][1:a]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[a]','-vf',vf,'-map','0:v','-map','[a]','-t',f'{total:.3f}','-c:v','libx264','-preset','veryfast','-crf','21','-c:a','aac','-b:a','192k','-movflags','+faststart',str(dest)])
+    else:
+        run(['ffmpeg','-y','-i',str(source),'-vf',vf,'-t',f'{total:.3f}','-c:v','libx264','-preset','veryfast','-crf','21','-c:a','copy','-movflags','+faststart',str(dest)])
+
+
+def build_clean_base(total):
+    video=WORK/'video.mp4';narr=WORK/'narration.wav';music=WORK/'music.wav';out=WORK/'clean_base.mp4'
+    if not video.exists() or not narr.exists(): return None
+    if music.exists():
+        vol={'low':'0.12','medium':'0.22','high':'0.34'}.get(os.getenv('INPUT_MUSIC_VOLUME','medium'),'0.22')
+        run(['ffmpeg','-y','-i',str(video),'-i',str(narr),'-i',str(music),'-filter_complex',f'[1:a]volume=1.0[v];[2:a]volume={vol}[m];[v][m]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[a]','-map','0:v','-map','[a]','-t',f'{total:.3f}','-c:v','copy','-c:a','aac','-b:a','192k',str(out)])
+    else:
+        run(['ffmpeg','-y','-i',str(video),'-i',str(narr),'-map','0:v','-map','1:a','-t',f'{total:.3f}','-c:v','copy','-c:a','aac','-b:a','192k',str(out)])
+    return out
+
+
+def main():
+    final=OUT/'final.mp4'
+    if not final.exists(): raise SystemExit('Vídeo final ausente para acabamento.')
+    total=float(os.getenv('INPUT_DURATION','65'))
+    plan=json.loads(os.getenv('INPUT_PLAN_JSON','{}'))
+    pace=os.getenv('INPUT_EDITING_PACE','balanced')
+    sfx=os.getenv('INPUT_SFX_MODE','subtle')
+    ambience=os.getenv('INPUT_AMBIENCE_MODE','subtle')
+    brand=os.getenv('INPUT_BRANDING_MODE','off')=='on'
+    brand_text=os.getenv('INPUT_BRAND_TEXT','').strip()[:48] if brand else ''
+    clean=os.getenv('INPUT_CLEAN_EXPORT','on')=='on'
+    durs=scene_durations(plan,total)
+    extra=make_extra_audio(total,durs,pace,sfx,ambience,os.getenv('INPUT_NICHE_KEY','custom'))
+    write_srt(plan,total)
+
+    source=WORK/'final_before_dynamic.mp4';final.replace(source)
+    finish_video(source,final,total,extra,pace,brand_text)
+
+    if clean and os.getenv('INPUT_CAPTIONS','on')=='on':
+        base=build_clean_base(total)
+        if base: finish_video(base,OUT/'final_sem_legenda.mp4',total,extra,pace,brand_text)
+
+    meta_path=OUT/'metadata.json'
+    try: meta=json.loads(meta_path.read_text(encoding='utf-8'))
+    except Exception: meta={}
+    meta['creative_edit']={'pace':pace,'sfx':sfx,'ambience':ambience,'branding':bool(brand_text),'clean_export':clean,'srt_export':True}
+    meta_path.write_text(json.dumps(meta,ensure_ascii=False,indent=2),encoding='utf-8')
+    print('Acabamento dinâmico aplicado.',flush=True)
+
+if __name__=='__main__': main()

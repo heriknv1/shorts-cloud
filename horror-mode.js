@@ -27,7 +27,7 @@
         'retro-surreal':'retro surreal psychological horror illustration',
         interdimensional:'surreal cosmic psychological horror illustration'
       }[style]||'premium cinematic 2D horror animation';
-      const prompt=`psychological horror suspense, lonely hallway at night, subtle unsettling detail, low key lighting, volumetric shadows, ${styleText}, non graphic, no gore, vertical 9:16, no text, no watermark`;
+      const prompt=`psychological horror suspense, lonely hallway at night, subtle unsettling detail, low key lighting, volumetric shadows, ${styleText}, non graphic, vertical 9:16, no text, no watermark`;
       photo.src=`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=910&nologo=true&seed=13082026&enhance=true`;
       photo.alt='Prévia de terror e suspense';
       return;
@@ -70,19 +70,20 @@
   }
 
   window.fetch=async function(input,init){
-    const url=typeof input==='string'?input:input?.url||'';
-    let nextInit=init;
-    if(horrorSelected&&init?.method==='POST'&&(url.includes('/api/plan')||url.includes('/api/scene-query')||url.includes('/api/generate'))){
-      nextInit={...init,body:patchBody(init.body)};
+    const originalUrl=typeof input==='string'?input:input?.url||'';
+    let target=input,nextInit=init;
+    if(horrorSelected&&init?.method==='POST'){
+      if(originalUrl.includes('/api/plan'))target='/api/horror-plan';
+      else if(originalUrl.includes('/api/scene-query'))target='/api/horror-scene-query';
+      if(originalUrl.includes('/api/plan')||originalUrl.includes('/api/scene-query')||originalUrl.includes('/api/generate')){
+        nextInit={...init,body:patchBody(init.body)};
+      }
     }
-    return nativeFetch(input,nextInit);
+    return nativeFetch(target,nextInit);
   };
 
   function boot(){
     injectPreset();
-    $('planBtn')?.addEventListener('click',()=>{
-      if(horrorSelected&&!$('topic')?.value.trim())$('topic').value='História original de terror e suspense com tensão crescente e final marcante';
-    },true);
     ['visualStyle','mediaMode','cartoonStyle'].forEach(id=>$(id)?.addEventListener('change',()=>setTimeout(syncHorrorPreview,0)));
     document.addEventListener('change',e=>{if(e.target?.id==='mediaSource')setTimeout(syncHorrorPreview,0)});
   }

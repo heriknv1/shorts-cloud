@@ -7,7 +7,7 @@ import time
 import wave
 from pathlib import Path
 
-import requests
+from google import genai
 
 ROOT = Path(__file__).resolve().parents[1]
 WORK = ROOT / 'work_turbo'
@@ -149,63 +149,33 @@ def postprocess_fallback_voice(src, dst):
         '-ar', '48000', '-ac', '1', '-c:a', 'pcm_s16le', str(dst)
     ], quiet=True)
 
-def _extract_audio_b64(data):
-    try:
-        parts = data['candidates'][0]['content']['parts']
-    except (KeyError, IndexError, TypeError):
-        return None
-    for part in parts:
-        inline = part.get('inlineData') or part.get('inline_data') or {}
-        encoded = inline.get('data')
-        if encoded:
-            return encoded
-    return None
-
 def gemini_voice(spoken, idx, wav):
     if not GEMINI_API_KEY:
         return False
 
     gemini_voice_name, _, _ = selected_profile()
-    url = (
-        'https://generativelanguage.googleapis.com/v1beta/models/'
-        f'{GEMINI_TTS_MODEL}:generateContent'
-    )
-    payload = {
-        'contents': [{'parts': [{'text': director_prompt(spoken)}]}],
-        'generationConfig': {
-            'responseModalities': ['AUDIO'],
-            'speechConfig': {
-                'languageCode': 'pt-BR',
-                'voiceConfig': {
-                    'prebuiltVoiceConfig': {'voiceName': gemini_voice_name}
-                }
-            }
-        }
-    }
-    headers = {
-        'x-goog-api-key': GEMINI_API_KEY,
-        'Content-Type': 'application/json',
-    }
     rawwav = WORK / f'voice_natural_raw_{idx:02d}.wav'
+    client = genai.Client(api_key=GEMINI_API_KEY)
 
     for attempt in range(3):
         try:
-            response = requests.post(url, headers=headers, json=payload, timeout=120)
-        except requests.RequestException:
-            response = None
-
-        if response is None or response.status_code in (429, 500, 502, 503, 504):
-            time.sleep(2 + attempt * 3)
-            continue
-        if not response.ok:
-            return False
-        try:
-            encoded = _extract_audio_b64(response.json())
+            interaction = client.interactions.create(
+                model=GEMINI_TTS_MODEL,
+                input=director_prompt(spoken),
+                response_format={'type': 'audio'},
+                generation_config={
+                    'speech_config': [
+                        {'voice': gemini_voice_name}
+                    ]
+                },
+            )
+            audio = getattr(interaction, 'output_audio', None)
+            encoded = getattr(audio, 'data', None) if audio else None
             if not encoded:
-                raise ValueError('audio ausente')
+                raise RuntimeError('audio ausente')
             pcm = base64.b64decode(encoded)
             if len(pcm) < 4000:
-                raise ValueError('audio curto')
+                raise RuntimeError('audio curto')
             with wave.open(str(rawwav), 'wb') as wf:
                 wf.setnchannels(1)
                 wf.setsampwidth(2)
@@ -213,10 +183,12 @@ def gemini_voice(spoken, idx, wav):
                 wf.writeframes(pcm)
             polish_voice(rawwav, wav)
             if not wav.exists() or wav.stat().st_size < 8000 or duration(wav) < .3:
-                raise ValueError('audio inválido')
+                raise RuntimeError('audio inválido')
             return True
         except Exception:
-            time.sleep(1 + attempt)
+            print(f'Cena {idx+1}: tentativa de narração natural {attempt+1} indisponível.', flush=True)
+            if attempt < 2:
+                time.sleep(2 + attempt * 3)
     return False
 
 def edge_voice(spoken, idx, wav):

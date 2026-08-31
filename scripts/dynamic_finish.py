@@ -49,8 +49,7 @@ def write_srt(plan,total):
     rows=[];cursor=0.0;idx=1
     for scene,dur in zip(scenes,durs):
         words=str(scene.get('narration') or '').split()
-        chunks=[]
-        cur=[]
+        chunks=[];cur=[]
         for word in words:
             cur.append(word)
             if len(cur)>=7 or str(word).endswith(('.', '!', '?', '…')):
@@ -73,10 +72,12 @@ def make_extra_audio(total,scene_durs,pace,sfx_mode,ambience_mode,niche):
         t=np.arange(n,dtype=np.float32)/sr
         base={'horror':43.0,'horror-real':47.0,'science':82.0,'biblical':55.0,'devotional':65.0,'motivation':72.0}.get(niche,58.0)
         audio += .0045*np.sin(2*np.pi*base*t)+.0023*np.sin(2*np.pi*(base*1.51)*t)
-        noise=rng.normal(0,1,n).astype(np.float32)
-        kernel=np.ones(720,dtype=np.float32)/720
-        smooth=np.convolve(noise,kernel,mode='same')
-        audio += .0032*smooth
+        # Sparse random anchors interpolated over time create a soft room-like texture cheaply.
+        step=2400
+        xp=np.arange(0,n+step,step,dtype=np.int64)
+        fp=rng.normal(0,1,len(xp)).astype(np.float32)
+        smooth=np.interp(np.arange(n,dtype=np.int64),xp,fp).astype(np.float32)
+        audio += .0025*smooth
     if sfx_mode!='off':
         strength=.030 if sfx_mode=='subtle' else .055
         boundaries=[];c=0.0
@@ -89,7 +90,8 @@ def make_extra_audio(total,scene_durs,pace,sfx_mode,ambience_mode,niche):
             if ln<=0: continue
             env=np.exp(-np.linspace(0,6,ln,dtype=np.float32))
             noise=rng.normal(0,1,ln).astype(np.float32)
-            tone=np.sin(2*np.pi*np.linspace(180,70,ln,dtype=np.float32)*np.arange(ln,dtype=np.float32)/sr)
+            phase=np.cumsum(np.linspace(180,70,ln,dtype=np.float32))/sr
+            tone=np.sin(2*np.pi*phase)
             audio[start:start+ln]+=amp*(noise*.34+tone*.66)*env
     peak=max(.001,float(np.max(np.abs(audio))))
     if peak>.15: audio*=.15/peak
@@ -99,7 +101,6 @@ def make_extra_audio(total,scene_durs,pace,sfx_mode,ambience_mode,niche):
 
 def video_filter(pace,brand_text):
     interval={'fast':1.7,'balanced':2.2,'cinematic':3.0}.get(pace,2.2)
-    # Reframe subtly every interval while keeping continuous movement inside each segment.
     x=f"54+24*sin(floor(t/{interval})*1.7)+8*sin(t*0.7)"
     y=f"96+38*cos(floor(t/{interval})*1.3)+10*sin(t*0.45)"
     filters=[f"scale=1188:2112,crop=1080:1920:x='{x}':y='{y}'"]
@@ -112,7 +113,7 @@ def video_filter(pace,brand_text):
 def finish_video(source,dest,total,extra,pace,brand_text):
     vf=video_filter(pace,brand_text)
     if extra:
-        run(['ffmpeg','-y','-i',str(source),'-i',str(extra),'-filter_complex',f'[0:a][1:a]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[a]','-vf',vf,'-map','0:v','-map','[a]','-t',f'{total:.3f}','-c:v','libx264','-preset','veryfast','-crf','21','-c:a','aac','-b:a','192k','-movflags','+faststart',str(dest)])
+        run(['ffmpeg','-y','-i',str(source),'-i',str(extra),'-filter_complex','[0:a][1:a]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[a]','-vf',vf,'-map','0:v','-map','[a]','-t',f'{total:.3f}','-c:v','libx264','-preset','veryfast','-crf','21','-c:a','aac','-b:a','192k','-movflags','+faststart',str(dest)])
     else:
         run(['ffmpeg','-y','-i',str(source),'-vf',vf,'-t',f'{total:.3f}','-c:v','libx264','-preset','veryfast','-crf','21','-c:a','copy','-movflags','+faststart',str(dest)])
 
@@ -142,14 +143,11 @@ def main():
     durs=scene_durations(plan,total)
     extra=make_extra_audio(total,durs,pace,sfx,ambience,os.getenv('INPUT_NICHE_KEY','custom'))
     write_srt(plan,total)
-
     source=WORK/'final_before_dynamic.mp4';final.replace(source)
     finish_video(source,final,total,extra,pace,brand_text)
-
     if clean and os.getenv('INPUT_CAPTIONS','on')=='on':
         base=build_clean_base(total)
         if base: finish_video(base,OUT/'final_sem_legenda.mp4',total,extra,pace,brand_text)
-
     meta_path=OUT/'metadata.json'
     try: meta=json.loads(meta_path.read_text(encoding='utf-8'))
     except Exception: meta={}

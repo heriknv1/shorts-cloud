@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import base64
+import json
 import os
 import re
 import subprocess
@@ -146,9 +147,22 @@ def edge_voice(spoken,idx,wav):
 def piper_voice(spoken,idx,wav):
     piper_raw=WORK/f'voice_piper_{idx:02d}.wav'; run(['piper','--model',PIPER_MODEL,'--output_file',str(piper_raw)],stdin=spoken.encode('utf-8')); postprocess_fallback_voice(piper_raw,wav)
 
+def silent_scene(idx):
+    wav=WORK/f'voice_{idx:02d}.wav'
+    try:
+        plan=json.loads(os.getenv('INPUT_PLAN_JSON','{}'))
+        count=max(1,len(plan.get('scenes') or []))
+    except Exception:
+        count=8
+    target=max(1.0,float(os.getenv('INPUT_DURATION','65')))
+    seconds=target/count
+    run(['ffmpeg','-y','-f','lavfi','-i','anullsrc=channel_layout=mono:sample_rate=48000','-t',f'{seconds:.6f}','-c:a','pcm_s16le',str(wav)],quiet=True)
+    return wav,'silent'
+
 def synthesize(text,idx):
     if os.getenv('INPUT_VOICE','').strip().lower()=='off':
-        raise RuntimeError('Narração desativada; o motor de voz não deve ser chamado.')
+        print(f'Cena {idx+1}: narração desativada.',flush=True)
+        return silent_scene(idx)
     spoken=naturalize_speech_text(text); wav=WORK/f'voice_{idx:02d}.wav'
     if gemini_voice(spoken,idx,wav):
         print(f'Cena {idx+1}: narração natural gerada.',flush=True); return wav,'neural'

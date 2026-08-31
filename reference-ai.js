@@ -29,7 +29,7 @@
       </div>`;
     media.parentElement.insertAdjacentElement('afterend',wrap);
     const stage4=document.querySelector('.stage[data-stage="4"] .generate-panel');
-    if(stage4){const panel=document.createElement('div');panel.className='engine-panel';panel.id='enginePanel';panel.innerHTML=`<h3>IA e motores em uso</h3><div class="engine-grid"><div class="engine-item"><span>Etapa atual</span><strong class="engine-active" id="engineStage">Aguardando</strong></div><div class="engine-item"><span>Roteiro</span><strong id="engineScript">Qwen 3.8 27B</strong></div><div class="engine-item"><span>Visual</span><strong id="engineVisual">Seleção automática</strong></div><div class="engine-item"><span>Voz</span><strong id="engineVoice">Edge Neural</strong></div></div>`;stage4.insertAdjacentElement('afterend',panel)}
+    if(stage4){const panel=document.createElement('div');panel.className='engine-panel';panel.id='enginePanel';panel.innerHTML=`<h3>Motores em uso</h3><div class="engine-grid"><div class="engine-item"><span>Etapa atual</span><strong class="engine-active" id="engineStage">Aguardando</strong></div><div class="engine-item"><span>Roteiro</span><strong id="engineScript">Inteligência principal</strong></div><div class="engine-item"><span>Visual</span><strong id="engineVisual">Criação visual inteligente</strong></div><div class="engine-item"><span>Voz</span><strong id="engineVoice">Narração natural</strong></div></div>`;stage4.insertAdjacentElement('afterend',panel)}
     $('mediaSource').addEventListener('change',()=>{state.mode=$('mediaSource').value==='reference'?'reference':'auto';syncMode()});
     $('chooseReferenceBtn').addEventListener('click',()=>$('referenceImageInput').click());
     $('removeReferenceBtn').addEventListener('click',clearReference);
@@ -40,7 +40,7 @@
 
   function setReferenceBusy(value){state.busy=!!value;const b=$('chooseReferenceBtn');if(b){b.disabled=state.busy;b.textContent=state.busy?'Preparando…':'Escolher foto'}}
   function clearReference(){state.b64='';state.dataUrl='';state.name='';if($('referenceImageInput'))$('referenceImageInput').value='';if($('referenceThumb'))$('referenceThumb').removeAttribute('src');if($('removeReferenceBtn'))$('removeReferenceBtn').hidden=true;text('referenceFileText','Envie JPG, PNG ou WEBP. A foto será usada diretamente na geração visual.');syncPreview()}
-  function syncMode(){state.mode=$('mediaSource')?.value==='reference'?'reference':'auto';const ref=state.mode==='reference';if($('referenceUpload'))$('referenceUpload').hidden=!ref;text('referenceModeNote',ref?'A foto será entrada direta da geração. O sistema não buscará imagens ou vídeos parecidos.':'No modo automático, o sistema escolhe a melhor forma de criar cada cena.');const notice=$('visualNotice');if(notice&&ref)notice.textContent='Modo Referência: as cenas visuais serão geradas diretamente a partir da foto enviada, sem busca de mídia parecida.';text('engineVisual',ref?'FLUX.2 Klein • referência obrigatória':'FLUX.2 Klein → FLUX.1 Schnell → auxiliar');syncPreview()}
+  function syncMode(){state.mode=$('mediaSource')?.value==='reference'?'reference':'auto';const ref=state.mode==='reference';if($('referenceUpload'))$('referenceUpload').hidden=!ref;text('referenceModeNote',ref?'A foto será entrada direta da geração. O sistema não buscará imagens ou vídeos parecidos.':'No modo automático, o sistema escolhe a melhor forma de criar cada cena.');const notice=$('visualNotice');if(notice&&ref)notice.textContent='Modo Referência: as cenas visuais serão geradas diretamente a partir da foto enviada, sem busca de mídia parecida.';text('engineVisual',ref?'Criação visual por referência':'Criação visual inteligente com alternativas automáticas');syncPreview()}
   function syncPreview(){if(state.mode!=='reference'||!state.dataUrl)return;const photo=$('previewPhoto'),fallback=$('previewIllustration');if(photo){photo.hidden=false;photo.src=state.dataUrl;photo.alt='Foto de referência enviada'}if(fallback)fallback.hidden=true}
 
   function blobToBase64(blob){return blob.arrayBuffer().then(buf=>{const bytes=new Uint8Array(buf);let binary='';for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,i+0x8000));return btoa(binary)})}
@@ -55,8 +55,8 @@
 
   function engineFromStatus(data){
     const runs=data?.runs||[],active=runs.find(r=>r.status!=='completed'),latest=runs.find(r=>r.status==='completed'&&r.conclusion==='success');
-    if(active){text('engineStage',active.stage||'Processando');text('engineScript','Qwen 3.8 27B');text('engineVisual',state.mode==='reference'?'FLUX.2 Klein • referência obrigatória':'FLUX.2 Klein → FLUX.1 Schnell → auxiliar');text('engineVoice','Edge Neural → alternativa local');return}
-    if(latest?.engines){text('engineStage','Concluído');text('engineScript',latest.engines.script||'Qwen 3.8 27B');text('engineVisual',latest.engines.visual||'Não informado');text('engineVoice',latest.engines.voice||'Não informado')}
+    if(active){text('engineStage',active.stage||'Processando');text('engineScript','Inteligência principal');text('engineVisual',state.mode==='reference'?'Criação visual por referência':'Criação visual inteligente com alternativas automáticas');text('engineVoice','Narração natural com alternativas automáticas');return}
+    if(latest?.engines){text('engineStage','Concluído');text('engineScript',latest.engines.script||'Inteligência principal');text('engineVisual',latest.engines.visual||'Criação visual concluída');text('engineVoice',latest.engines.voice||'Narração concluída')}
   }
 
   function fakeJson(status,obj){return Promise.resolve(new Response(JSON.stringify(obj),{status,headers:{'Content-Type':'application/json'}}))}
@@ -64,9 +64,9 @@
     const url=typeof input==='string'?input:input?.url||'';let nextInit=init;
     if(url.includes('/api/scene-query')&&state.mode==='reference'){
       let body={};try{body=JSON.parse(init?.body||'{}')}catch{}
-      const desc=String(body.visualDescription||body.narration||'cinematic scene').trim();return fakeJson(200,{visual_query:desc,visual_query_backup:desc,recommended_media:'image',engine:{stage:'visual',model:'FLUX.2 Klein'}})
+      const desc=String(body.visualDescription||body.narration||'cinematic scene').trim();return fakeJson(200,{visual_query:desc,visual_query_backup:desc,recommended_media:'image',engine:{stage:'visual',model:'reference'}})
     }
-    if(url.includes('/api/plan')&&init?.method==='POST'){text('engineStage','Criando roteiro');text('engineScript','Qwen 3.8 27B');try{const body=JSON.parse(init.body||'{}');body.mediaSource=state.mode;nextInit={...init,body:JSON.stringify(body)}}catch{}}
+    if(url.includes('/api/plan')&&init?.method==='POST'){text('engineStage','Criando roteiro');text('engineScript','Inteligência principal');try{const body=JSON.parse(init.body||'{}');body.mediaSource=state.mode;nextInit={...init,body:JSON.stringify(body)}}catch{}}
     if(url.includes('/api/generate')&&init?.method==='POST'){
       if(state.mode==='reference'&&!state.b64)return fakeJson(400,{error:'Envie uma foto de referência antes de gerar.'});
       if(state.busy)return fakeJson(400,{error:'Aguarde a foto terminar de ser preparada.'});

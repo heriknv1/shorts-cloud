@@ -13,6 +13,10 @@ const PREVIEWS = {
     url: 'https://images.unsplash.com/photo-1748418647784-e016efb1acd1?auto=format&fit=crop&w=700&h=1244&q=85',
     alt: 'Floresta coberta por neblina para histórias de mistério'
   },
+  horror: {
+    url: 'https://images.unsplash.com/photo-1509248961158-e54f6934749c?auto=format&fit=crop&w=700&h=1244&q=85',
+    alt: 'Corredor escuro com iluminação dramática para terror e suspense'
+  },
   ancient: {
     url: 'https://images.unsplash.com/photo-1755071158506-00fda2beabfa?auto=format&fit=crop&w=700&h=1244&q=85',
     alt: 'Ruínas de templo antigo ao pôr do sol'

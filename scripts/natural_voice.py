@@ -18,14 +18,15 @@ GEMINI_TTS_MODEL = os.getenv('GEMINI_TTS_MODEL', 'gemini-3.1-flash-tts-preview')
 PIPER_MODEL = os.getenv('PIPER_MODEL_PATH', 'models/pt_BR-faber-medium.onnx')
 
 VOICE_PROFILES = {
-    'gemini:GacruxDeep': ('Gacrux', 'pt-BR-AntonioNeural', 'deep masculine, warm, resonant, mature, cinematic and convincingly human'),
-    'gemini:Gacrux': ('Gacrux', 'pt-BR-AntonioNeural', 'mature, grounded, trustworthy and warm'),
+    'gemini:AlgenibDeep': ('Algenib', 'pt-BR-AntonioNeural', 'deep masculine, warm, resonant, mature, cinematic and convincingly human'),
+    'gemini:GacruxDeep': ('Algenib', 'pt-BR-AntonioNeural', 'deep masculine, warm, resonant, mature, cinematic and convincingly human'),
+    'gemini:Gacrux': ('Gacrux', 'pt-BR-FranciscaNeural', 'mature, grounded, trustworthy and warm'),
     'gemini:Sulafat': ('Sulafat', 'pt-BR-FranciscaNeural', 'warm, empathetic, expressive and natural'),
     'gemini:Achernar': ('Achernar', 'pt-BR-ThalitaNeural', 'soft, intimate, gentle and natural'),
     'gemini:Charon': ('Charon', 'pt-BR-AntonioNeural', 'informative, composed, clear and documentary-like'),
     'gemini:Kore': ('Kore', 'pt-BR-FranciscaNeural', 'firm, confident, focused and expressive'),
-    'gemini:Puck': ('Puck', 'pt-BR-ThalitaNeural', 'upbeat, lively, engaging and energetic'),
-    'pt-BR-AntonioNeural': ('Gacrux', 'pt-BR-AntonioNeural', 'mature, grounded, trustworthy and warm'),
+    'gemini:Puck': ('Puck', 'pt-BR-AntonioNeural', 'upbeat, lively, engaging and energetic'),
+    'pt-BR-AntonioNeural': ('Charon', 'pt-BR-AntonioNeural', 'mature, grounded, trustworthy and warm'),
     'pt-BR-FranciscaNeural': ('Sulafat', 'pt-BR-FranciscaNeural', 'warm, empathetic, expressive and natural'),
     'pt-BR-ThalitaNeural': ('Achernar', 'pt-BR-ThalitaNeural', 'soft, intimate, gentle and natural'),
 }
@@ -48,7 +49,7 @@ def voice_settings():
     pitch_mode=os.getenv('INPUT_VOICE_PITCH','default')
     speed_mode=os.getenv('INPUT_VOICE_SPEED','default')
     if speed_mode not in {'default','fast','veryfast'}: speed_mode='default'
-    if requested=='gemini:GacruxDeep': pitch_mode='low'
+    if requested in {'gemini:AlgenibDeep','gemini:GacruxDeep'}: pitch_mode='low'
     pitch={'low':'-8Hz','default':'+0Hz','high':'+7Hz'}.get(pitch_mode,'+0Hz')
     edge_rate={'default':'+0%','fast':'+12%','veryfast':'+25%'}.get(speed_mode,'+0%')
     tempo={'default':1.0,'fast':1.12,'veryfast':1.25}.get(speed_mode,1.0)
@@ -71,11 +72,12 @@ def director_prompt(spoken):
     requested=os.getenv('INPUT_VOICE',DEFAULT_VOICE)
     pitch_mode,speed_mode,_,_,_=voice_settings(); tone=os.getenv('INPUT_TONE','cinematic').strip().lower(); niche=os.getenv('INPUT_NICHE_KEY','custom').strip().lower(); _,_,profile=selected_profile()
     pace={'default':'natural conversational pacing, fluid and human','fast':'noticeably faster than normal, energetic and fluid while keeping every word clear','veryfast':'very brisk short-form narration, approximately one quarter faster than normal, energetic but still natural and intelligible'}.get(speed_mode,'natural conversational pacing, fluid and human')
-    register={'low':'lower masculine vocal register, full chest resonance and warm low-frequency presence, never artificially pitch-shifted','default':'comfortable neutral vocal register','high':'slightly brighter vocal register, still natural and relaxed'}.get(pitch_mode,'comfortable neutral vocal register')
-    if requested=='gemini:GacruxDeep': register='distinctly deep adult male vocal register with rich chest resonance, calm authority, warmth and natural human texture; avoid synthetic bass, distortion or announcer-like delivery'
+    register={'low':'lower vocal register, full chest resonance and warm low-frequency presence, never artificially pitch-shifted','default':'comfortable neutral vocal register','high':'slightly brighter vocal register, still natural and relaxed'}.get(pitch_mode,'comfortable neutral vocal register')
+    if requested in {'gemini:AlgenibDeep','gemini:GacruxDeep'}: register='distinctly deep adult male vocal register with rich chest resonance, calm authority, warmth and natural human texture; avoid synthetic bass, distortion or announcer-like delivery'
     mood={'cinematic':'cinematic, intimate and emotionally engaging without sounding theatrical','documentary':'credible, informative and conversational, like a premium documentary narrator','dramatic':'emotionally present and dramatic with restraint, never exaggerated','energetic':'energetic and charismatic without shouting or sounding like an advertisement'}.get(tone,'natural, engaging and conversational')
     if niche in {'biblical','devotional'}: context='For biblical or devotional content, sound reverent, sincere and warm, with respectful emphasis.'
     elif niche=='horror': context='For horror and suspense, build restrained tension with controlled pauses and subtle unease; never become cartoonish or overacted.'
+    elif niche=='horror-real': context='For documented real horror or unsettling true stories, sound serious, restrained and documentary-like. Never sensationalize facts.'
     else: context='Match the emotion of the text naturally and avoid repetitive sing-song cadence.'
     return f'''Synthesize natural human speech in Brazilian Portuguese (pt-BR).
 Speak ONLY the transcript between TRANSCRIPT BEGIN and TRANSCRIPT END. Never read these directions aloud.
@@ -107,7 +109,7 @@ def polish_voice(src,dst,apply_speed=True):
 def postprocess_fallback_voice(src,dst):
     requested=os.getenv('INPUT_VOICE','')
     pitch_mode,speed_mode,_,_,tempo=voice_settings(); ratio={'low':0.965,'default':1.0,'high':1.03}.get(pitch_mode,1.0); filters=[]
-    if requested=='gemini:GacruxDeep': ratio=0.955
+    if requested in {'gemini:AlgenibDeep','gemini:GacruxDeep'}: ratio=0.955
     if abs(ratio-1.0)>.001: filters += [f'asetrate=48000*{ratio:.4f}','aresample=48000',f'atempo={1/ratio:.4f}']
     if speed_mode!='default': filters.append(f'atempo={tempo:.4f}')
     filters += ['highpass=f=60','lowpass=f=12500','acompressor=threshold=-19dB:ratio=1.5:attack=28:release=240','alimiter=limit=0.95']
@@ -125,7 +127,6 @@ def gemini_voice(spoken,idx,wav):
             if len(pcm)<4000: raise RuntimeError('audio curto')
             with wave.open(str(rawwav),'wb') as wf:
                 wf.setnchannels(1); wf.setsampwidth(2); wf.setframerate(24000); wf.writeframes(pcm)
-            # Gemini receives pacing direction and we also enforce the selected speed in post-processing.
             polish_voice(rawwav,wav,apply_speed=True)
             if not wav.exists() or wav.stat().st_size<8000 or duration(wav)<.3: raise RuntimeError('audio inválido')
             return True
@@ -139,7 +140,6 @@ def edge_voice(spoken,idx,wav):
     run(['edge-tts','--voice',edge_voice_name,f'--rate={rate}',f'--pitch={pitch}','--text',spoken,'--write-media',str(mp3)])
     if not mp3.exists() or mp3.stat().st_size<1000: raise RuntimeError('voz neural inválida')
     run(['ffmpeg','-y','-i',str(mp3),'-ar','48000','-ac','1','-c:a','pcm_s16le',str(rawwav)],quiet=True)
-    # Edge already applies the speed above; polish without applying tempo a second time.
     polish_voice(rawwav,wav,apply_speed=False)
     if duration(wav)<.3: raise RuntimeError('áudio curto demais')
 
@@ -147,6 +147,8 @@ def piper_voice(spoken,idx,wav):
     piper_raw=WORK/f'voice_piper_{idx:02d}.wav'; run(['piper','--model',PIPER_MODEL,'--output_file',str(piper_raw)],stdin=spoken.encode('utf-8')); postprocess_fallback_voice(piper_raw,wav)
 
 def synthesize(text,idx):
+    if os.getenv('INPUT_VOICE','').strip().lower()=='off':
+        raise RuntimeError('Narração desativada; o motor de voz não deve ser chamado.')
     spoken=naturalize_speech_text(text); wav=WORK/f'voice_{idx:02d}.wav'
     if gemini_voice(spoken,idx,wav):
         print(f'Cena {idx+1}: narração natural gerada.',flush=True); return wav,'neural'

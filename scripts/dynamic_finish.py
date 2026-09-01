@@ -105,12 +105,11 @@ def make_extra_audio(total,scene_durs,pace,sfx_mode,ambience_mode,niche):
 
 
 def video_filter(pace,brand_text,niche='custom',include_captions=True):
-    interval={'fast':1.7,'balanced':2.2,'cinematic':3.0}.get(pace,2.2)
-    x=f"54+24*sin(floor(t/{interval})*1.7)+8*sin(t*0.7)"
-    y=f"96+38*cos(floor(t/{interval})*1.3)+10*sin(t*0.45)"
-    filters=[f"scale=1188:2112,crop=1080:1920:x='{x}':y='{y}'"]
+    # Scene clips already contain smooth camera motion. Keep the finishing crop fixed;
+    # discontinuous crop coordinates caused visible jumps throughout the final video.
+    filters=["scale=1188:2112,crop=1080:1920:x=54:y=96"]
     if niche=='analog-horror':
-        filters += ["crop=1080:810:0:555","scale=960:720","pad=1080:1920:60:600:black","eq=contrast=1.22:brightness=-0.075:saturation=0.38:gamma=0.92","colorbalance=rs=.14:gs=-.05:bs=-.09","noise=alls=9:allf=t+u","drawgrid=width=iw:height=4:thickness=1:color=black@0.16","fps=24","drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf:text='PLAY  ARCHIVE':fontcolor=white@0.62:fontsize=23:x=42:y=560:box=1:boxcolor=black@0.18"]
+        filters += ["crop=1080:810:0:555","scale=960:720","pad=1080:1920:60:600:black","eq=contrast=1.22:brightness=-0.075:saturation=0.38:gamma=0.92","colorbalance=rs=.14:gs=-.05:bs=-.09","noise=alls=9:allf=t+u","drawgrid=width=iw:height=4:thickness=1:color=black@0.16","drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf:text='PLAY  ARCHIVE':fontcolor=white@0.62:fontsize=23:x=42:y=560:box=1:boxcolor=black@0.18"]
         if include_captions and os.getenv('INPUT_CAPTIONS','on')=='on':
             font=''.join(c for c in os.getenv('INPUT_CAPTION_FONT','Montserrat') if c.isalnum() or c in ' _-')[:50] or 'Montserrat'
             size=max(36,min(92,int(os.getenv('INPUT_CAPTION_SIZE','56'))))
@@ -118,15 +117,16 @@ def video_filter(pace,brand_text,niche='custom',include_captions=True):
     if brand_text:
         textfile=WORK/'brand.txt';textfile.write_text(brand_text,encoding='utf-8')
         filters.append("drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:textfile=work_turbo/brand.txt:fontcolor=white@0.55:fontsize=24:borderw=1:bordercolor=black@0.25:x=w-tw-38:y=42")
+    filters += ["fps=30","format=yuv420p"]
     return ','.join(filters)
 
 
 def finish_video(source,dest,total,extra,pace,brand_text,niche='custom',include_captions=True):
     vf=video_filter(pace,brand_text,niche,include_captions)
     if extra:
-        run(['ffmpeg','-y','-i',str(source),'-i',str(extra),'-filter_complex','[0:a][1:a]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[a]','-vf',vf,'-map','0:v','-map','[a]','-t',f'{total:.3f}','-c:v','libx264','-preset','veryfast','-crf','21','-c:a','aac','-b:a','192k','-movflags','+faststart',str(dest)])
+        run(['ffmpeg','-y','-i',str(source),'-i',str(extra),'-filter_complex','[0:a][1:a]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[a]','-vf',vf,'-map','0:v','-map','[a]','-t',f'{total:.3f}','-c:v','libx264','-preset','veryfast','-crf','21','-pix_fmt','yuv420p','-profile:v','high','-level','4.1','-c:a','aac','-b:a','192k','-movflags','+faststart',str(dest)])
     else:
-        run(['ffmpeg','-y','-i',str(source),'-vf',vf,'-t',f'{total:.3f}','-c:v','libx264','-preset','veryfast','-crf','21','-c:a','copy','-movflags','+faststart',str(dest)])
+        run(['ffmpeg','-y','-i',str(source),'-vf',vf,'-t',f'{total:.3f}','-c:v','libx264','-preset','veryfast','-crf','21','-pix_fmt','yuv420p','-profile:v','high','-level','4.1','-c:a','copy','-movflags','+faststart',str(dest)])
 
 
 def build_clean_base(total):

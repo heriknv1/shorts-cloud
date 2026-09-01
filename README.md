@@ -12,6 +12,8 @@ Gerador independente de vídeos verticais de **60 a 70 segundos**, preparado par
 - **Computação pesada:** GitHub Actions (`ubuntu-latest`).
 - **Entrega:** GitHub Release com `final.mp4` + `metadata.json`.
 
+As dependências Python do renderizador ficam em `scripts/requirements.txt`. Elas não devem voltar para a raiz do repositório, pois a Vercel tentaria instalar modelos de voz e pacotes de GPU durante o deploy do site.
+
 O navegador apenas dispara a tarefa e consulta o status. Você pode fechar a página depois de iniciar.
 
 ## Por que 3/dia

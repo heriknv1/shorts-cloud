@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 import requests
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from PIL import Image, ImageDraw, ImageFont
+from secure_workflow_payload import load_secure_payload
 
 ROOT=Path(__file__).resolve().parents[1]
 WORK=ROOT/'work_illustrated_analysis'
@@ -18,19 +19,34 @@ OUT=ROOT/'output'
 WORK.mkdir(exist_ok=True)
 OUT.mkdir(exist_ok=True)
 
-SOURCE_URL=os.getenv('INPUT_SOURCE_URL','').strip()
-SOURCE_KIND=os.getenv('INPUT_SOURCE_KIND','link').strip()
-SOURCE_MIME=os.getenv('INPUT_SOURCE_MIME','application/octet-stream').strip()
-SOURCE_NAME=os.getenv('INPUT_SOURCE_NAME','conteudo').strip()[:160]
-USER_CONTEXT=os.getenv('INPUT_USER_CONTEXT','').strip()[:600]
-DOODLE_STYLE=os.getenv('INPUT_DOODLE_STYLE','clean-doodle').strip()
-REQUEST_ID=os.getenv('INPUT_REQUEST_ID','').strip()
 GROQ_KEY=os.getenv('GROQ_API_KEY','').strip()
 MODEL=os.getenv('GROQ_MODEL','qwen/qwen3.8-27b').strip()
-PLAN_KEY=os.getenv('INPUT_PLAN_KEY','').strip()
+GEMINI_KEY=os.getenv('GEMINI_API_KEY','').strip()
+GEMINI_MODEL=os.getenv('GEMINI_VISION_MODEL','gemini-3.1-flash-lite').strip() or 'gemini-3.1-flash-lite'
+
+SOURCE_URL=''
+SOURCE_KIND='link'
+SOURCE_MIME='application/octet-stream'
+SOURCE_NAME='conteudo'
+USER_CONTEXT=''
+DOODLE_STYLE='clean-doodle'
+REQUEST_ID=''
+PLAN_KEY=''
 
 RETRYABLE={408,425,429,500,502,503,504}
 GENERIC_RX=re.compile(r'\b(personagem|pessoa|homem|mulher|character|person)\s+(fala|falando|olha|olhando|talks?|talking|looks?|looking)\b',re.I)
+
+def load_configuration():
+    global SOURCE_URL,SOURCE_KIND,SOURCE_MIME,SOURCE_NAME,USER_CONTEXT,DOODLE_STYLE,REQUEST_ID,PLAN_KEY
+    payload=load_secure_payload()
+    SOURCE_URL=str(payload.get('source_url') or '').strip()
+    SOURCE_KIND=str(payload.get('source_kind') or 'link').strip()
+    SOURCE_MIME=str(payload.get('source_mime') or 'application/octet-stream').strip()
+    SOURCE_NAME=str(payload.get('source_name') or 'conteudo').strip()[:160]
+    USER_CONTEXT=str(payload.get('user_context') or '').strip()[:600]
+    DOODLE_STYLE=str(payload.get('doodle_style') or 'clean-doodle').strip()
+    REQUEST_ID=str(payload.get('request_id') or '').strip()
+    PLAN_KEY=str(payload.get('plan_key') or '').strip()
 
 def run(cmd,quiet=False,sensitive=False):
     print('+',' '.join('[endereço temporário protegido]' if sensitive and str(part)==SOURCE_URL else str(part) for part in cmd),flush=True)
@@ -146,27 +162,75 @@ def compact_transcript(data):
     if not segments:segments=[{'start':0,'end':float(data.get('duration') or 0),'text':' '.join(str(data.get('text') or '').split())}]
     return segments
 
-def image_content(paths):
-    result=[]
-    for path in paths[:3]:
-        encoded=base64.b64encode(path.read_bytes()).decode('ascii')
-        result.append({'type':'image_url','image_url':{'url':f'data:image/jpeg;base64,{encoded}'}})
-    return result
+def compact_visual_summary(value):
+    if not isinstance(value,dict):raise RuntimeError('A compreensão visual não retornou dados válidos.')
+    timeline=[]
+    for item in (value.get('timeline') or [])[:24]:
+        if not isinstance(item,dict):continue
+        timeline.append({
+            'start':round(max(0,float(item.get('start') or 0)),2),
+            'end':round(max(0,float(item.get('end') or item.get('start') or 0)),2),
+            'people':' '.join(str(item.get('people') or '').split())[:220],
+            'visible_action':' '.join(str(item.get('visible_action') or '').split())[:320],
+            'objects':' '.join(str(item.get('objects') or '').split())[:220],
+            'setting':' '.join(str(item.get('setting') or '').split())[:220],
+            'expression':' '.join(str(item.get('expression') or '').split())[:180],
+        })
+    characters=[]
+    for item in (value.get('characters') or [])[:8]:
+        if not isinstance(item,dict):continue
+        characters.append({
+            'label':' '.join(str(item.get('label') or '').split())[:50],
+            'appearance':' '.join(str(item.get('appearance') or '').split())[:300],
+        })
+    if not timeline:raise RuntimeError('O Gemini não identificou acontecimentos visuais suficientes no vídeo.')
+    return{
+        'overall_context':' '.join(str(value.get('overall_context') or '').split())[:700],
+        'characters':characters,
+        'timeline':timeline,
+    }
 
-def plan_prompt(transcription,duration_seconds,has_video,attempt):
+def understand_video_with_gemini(paths,duration_seconds):
+    if not paths:return{'overall_context':'Fonte somente em áudio; use a transcrição como verdade principal.','characters':[],'timeline':[]}
+    if not GEMINI_KEY:raise RuntimeError('O analisador visual do Gemini ainda não está configurado.')
+    prompt=f'''Analise estas três grades cronológicas de um vídeo vertical com duração de {duration_seconds:.3f}s. Cada quadro possui o horário impresso.
+Retorne um resumo visual factual e compacto para outro modelo criar um storyboard de desenho sincronizado.
+
+REGRAS:
+- Siga a ordem dos horários e descreva apenas o que realmente está visível.
+- Identifique pessoas recorrentes por rótulos neutros, como Pessoa 1 e Pessoa 2, usando somente cabelo, roupa, óculos e características visuais objetivas.
+- Não infira etnia, religião, saúde, orientação, parentesco ou identidade.
+- Para cada mudança útil, registre intervalo aproximado, pessoa, ação, expressão, objetos e ambiente.
+- Não copie nem transcreva marca d'água, nome de perfil, legenda ou identidade do vídeo.
+- Seja específico e conciso; não invente ações entre quadros.
+
+Retorne SOMENTE JSON:
+{{"overall_context":"contexto visual em português","characters":[{{"label":"Pessoa 1","appearance":"descrição objetiva"}}],"timeline":[{{"start":0.0,"end":2.3,"people":"Pessoa 1","visible_action":"ação observada","objects":"objetos relevantes","setting":"ambiente","expression":"expressão visível"}}]}}'''
+    parts=[{'text':prompt}]
+    for path in paths[:3]:parts.append({'inlineData':{'mimeType':'image/jpeg','data':base64.b64encode(path.read_bytes()).decode('ascii')}})
+    body={'contents':[{'role':'user','parts':parts}],'generationConfig':{'temperature':.15,'maxOutputTokens':3600,'responseMimeType':'application/json'}}
+    url=f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent'
+    response=request_with_retry(url,headers={'x-goog-api-key':GEMINI_KEY,'Content-Type':'application/json'},json=body)
+    if not response.ok:raise RuntimeError(f'A compreensão visual do Gemini não foi concluída (HTTP {response.status_code}).')
+    data=response.json();text=''.join(str(part.get('text') or '') for part in data.get('candidates',[{}])[0].get('content',{}).get('parts',[]))
+    return compact_visual_summary(extract_json(text))
+
+def plan_prompt(transcription,duration_seconds,visual_summary,attempt):
     segments=compact_transcript(transcription)
+    has_video=bool(visual_summary.get('timeline'))
     target=max(6,min(22,round(duration_seconds/1.35)))
     correction='' if attempt==0 else '\nA tentativa anterior foi rejeitada por conter cenas vagas ou pouca criatividade. Refaça com uma ação visual específica, uma reação e um detalhe cômico diferente em CADA trecho.'
     return f'''Você é diretor de uma animação 2D curta guiada por ÁUDIO REAL. Crie um storyboard original, coerente, muito criativo e divertido em português do Brasil.
 
 DURAÇÃO EXATA: {duration_seconds:.3f} segundos
-TIPO DA FONTE: {'vídeo com 12 quadros amostrados nas três imagens anexas' if has_video else 'áudio sem imagens'}
+TIPO DA FONTE: {'vídeo previamente analisado pelo Gemini' if has_video else 'áudio sem imagens'}
 ORIENTAÇÃO DO USUÁRIO: {USER_CONTEXT or 'nenhuma; respeite integralmente o contexto detectado'}
 ESTILO ESCOLHIDO: {DOODLE_STYLE}
 TRANSCRIÇÃO TEMPORIZADA: {json.dumps(segments,ensure_ascii=False)}
+RESUMO VISUAL TEMPORIZADO DO GEMINI: {json.dumps(visual_summary,ensure_ascii=False)}
 
 COMPREENSÃO OBRIGATÓRIA:
-- Entenda primeiro assunto, relações entre participantes, mudanças de contexto, intenção, subtexto e momento da graça. Os quadros têm horários impressos.
+- Entenda primeiro assunto, participantes visíveis, mudanças de contexto, intenção, subtexto e momento da graça. Use o resumo visual somente como observação dos quadros e a transcrição como verdade das falas.
 - Descreva apenas características visuais objetivas úteis à continuidade, como cabelo, óculos, roupa e formato do personagem. Não infira etnia, religião, saúde, orientação ou identidade.
 - Preserve as falas; não invente, reescreva ou acrescente diálogo.
 
@@ -202,9 +266,9 @@ def extract_json(text):
     if not match:raise RuntimeError('A direção criativa não retornou um storyboard válido.')
     return json.loads(match.group(0))
 
-def ask_storyboard(transcription,duration_seconds,sheets):
+def ask_storyboard(transcription,duration_seconds,visual_summary):
     for attempt in range(2):
-        content=[{'type':'text','text':plan_prompt(transcription,duration_seconds,bool(sheets),attempt)},*image_content(sheets)]
+        content=plan_prompt(transcription,duration_seconds,visual_summary,attempt)
         payload={'model':MODEL,'temperature':.72 if attempt==0 else .66,'max_completion_tokens':7600,'response_format':{'type':'json_object'},'messages':[{'role':'user','content':content}]}
         response=request_with_retry('https://api.groq.com/openai/v1/chat/completions',headers={'Authorization':f'Bearer {GROQ_KEY}','Content-Type':'application/json'},json=payload)
         if not response.ok:
@@ -275,7 +339,25 @@ def normalize_plan(raw,transcription,duration_seconds):
     summary=str(raw.get('summary') or 'Animação ilustrada criada a partir do áudio original.').strip()[:700]
     return {'title':title,'summary':summary,'description':summary,'hashtags':['#AudioIlustrado','#Animacao2D','#Storytime'],'niche_key':'audio-illustrated','analysis_id':REQUEST_ID,'duration_seconds':round(duration_seconds,3),'visual_context':context[:1800],'characters':chars,'source':{'kind':SOURCE_KIND,'mime':SOURCE_MIME,'name':SOURCE_NAME,'duration_seconds':round(duration_seconds,3),'audio_preserved':True},'scenes':normalized}
 
+def write_protected_json(path,value):
+    serialized=json.dumps(value,ensure_ascii=False,indent=2).encode('utf-8')
+    nonce=os.urandom(12)
+    encrypted=b'ILA1'+nonce+AESGCM(bytes.fromhex(PLAN_KEY)).encrypt(nonce,serialized,REQUEST_ID.encode('utf-8'))
+    path.write_bytes(encrypted)
+
+def safe_error_message(error):
+    text=' '.join(str(error or '').split())
+    if 'HTTP 413' in text:return 'O pacote de compreensão ficou grande demais. O processamento foi interrompido sem gerar um vídeo incompleto.'
+    if 'HTTP 429' in text:return 'Muita atividade nos serviços de inteligência no momento. Aguarde alguns instantes e tente novamente.'
+    if 'Gemini' in text:return 'O Gemini não conseguiu concluir a compreensão visual desse vídeo agora. Tente novamente em alguns instantes.'
+    if 'transcrição' in text.lower() or 'falas suficientes' in text.lower():return text[:300]
+    if 'duração entre' in text or 'faixa de áudio' in text or 'arquivo recebido' in text:return text[:300]
+    if 'obter o arquivo' in text or 'retornou uma página' in text:return 'Não foi possível acessar o conteúdo enviado. Se for um link protegido, envie o arquivo diretamente.'
+    if 'storyboard' in text.lower() or 'direção criativa' in text.lower():return text[:300]
+    return 'A análise foi interrompida por uma falha interna. Tente novamente; se persistir, o diagnóstico ficará registrado sem expor seu conteúdo.'
+
 def main():
+    load_configuration()
     if not SOURCE_URL.startswith('https://'):raise RuntimeError('Fonte pública inválida.')
     if not GROQ_KEY:raise RuntimeError('O motor de compreensão ainda não está configurado.')
     if not re.fullmatch(r'[a-f0-9]{64}',PLAN_KEY):raise RuntimeError('A proteção temporária do storyboard não foi configurada.')
@@ -284,9 +366,19 @@ def main():
     if duration_seconds<5 or duration_seconds>180:raise RuntimeError('Use conteúdo com duração entre 5 segundos e 3 minutos.')
     print(f'Conteúdo preparado: {duration_seconds:.2f}s, vídeo={has_video}, áudio={has_audio}',flush=True)
     audio=extract_audio(source);transcription=transcribe(audio);sheets=make_contact_sheets(source,duration_seconds) if has_video else []
-    raw=ask_storyboard(transcription,duration_seconds,sheets);plan=normalize_plan(raw,transcription,duration_seconds)
-    serialized=json.dumps(plan,ensure_ascii=False,indent=2).encode('utf-8');nonce=os.urandom(12);encrypted=b'ILA1'+nonce+AESGCM(bytes.fromhex(PLAN_KEY)).encrypt(nonce,serialized,REQUEST_ID.encode('utf-8'))
-    target=OUT/'illustrated_plan.enc';target.write_bytes(encrypted)
+    visual_summary=understand_video_with_gemini(sheets,duration_seconds)
+    print('Compreensão visual compacta concluída.',flush=True)
+    raw=ask_storyboard(transcription,duration_seconds,visual_summary);plan=normalize_plan(raw,transcription,duration_seconds)
+    write_protected_json(OUT/'illustrated_plan.enc',plan)
     print(json.dumps({'ok':True,'duration':duration_seconds,'scenes':len(plan['scenes']),'characters':len(plan['characters'])},ensure_ascii=False),flush=True)
 
-if __name__=='__main__':main()
+if __name__=='__main__':
+    try:
+        main()
+    except Exception as error:
+        message=safe_error_message(error)
+        if re.fullmatch(r'[a-f0-9]{64}',PLAN_KEY or '') and REQUEST_ID:
+            try:write_protected_json(OUT/'illustrated_error.enc',{'error':message})
+            except Exception:pass
+        print(f'Falha segura da análise: {message}',flush=True)
+        raise SystemExit(1)

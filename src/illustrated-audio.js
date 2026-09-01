@@ -1,4 +1,4 @@
-import { upload } from '@vercel/blob/client';
+import { put } from '@vercel/blob/client';
 
 (()=>{
   const nativeFetch=window.fetch.bind(window);
@@ -80,9 +80,12 @@ import { upload } from '@vercel/blob/client';
     state.uploading=true;$('chooseIllustratedFile').disabled=true;setSourceStatus('Enviando arquivo temporário…','busy',2);
     try{
       const pathname=`illustrated-inputs/${Date.now()}-${safeName(file.name)}`;
-      const result=await upload(pathname,file,{access:'private',handleUploadUrl:'/api/source-upload',multipart:file.size>5*1024*1024,onUploadProgress:({percentage})=>setSourceStatus(`Enviando… ${Math.round(percentage)}%`,'busy',percentage)});
+      const multipart=file.size>5*1024*1024,tokenResponse=await nativeFetch('/api/source-upload',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'blob.generate-client-token',payload:{pathname,clientPayload:null,multipart}})});let tokenData={};try{tokenData=await tokenResponse.json()}catch{}
+      if(!tokenResponse.ok)throw Error(tokenData.error||(tokenResponse.status===401?'Sua sessão expirou. Atualize a página e entre novamente.':'Não foi possível autorizar o envio agora.'));
+      const token=String(tokenData.clientToken||'');if(!token.startsWith('vercel_blob_client_'))throw Error('O armazenamento temporário devolveu uma autorização inválida.');
+      const result=await put(pathname,file,{access:'private',token,multipart,onUploadProgress:({percentage})=>setSourceStatus(`Enviando… ${Math.round(percentage)}%`,'busy',percentage)});
       state.uploadPath=result.pathname;setSourceStatus('Arquivo privado enviado e pronto para análise.','ok',100);
-    }catch(error){state.uploadPath='';setSourceStatus(error?.message?.includes('BLOB')?'O envio de arquivos ainda não está configurado no projeto.':(error?.message||'Não foi possível enviar este arquivo.'),'bad',0)}finally{state.uploading=false;$('chooseIllustratedFile').disabled=false}
+    }catch(error){state.uploadPath='';const detail=String(error?.message||'');setSourceStatus(detail||'Não foi possível enviar este arquivo.','bad',0)}finally{state.uploading=false;$('chooseIllustratedFile').disabled=false}
   }
 
   function previewSvg(){

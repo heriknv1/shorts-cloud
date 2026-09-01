@@ -1,37 +1,10 @@
 name: Generate Short
-run-name: "Short Cloud Studio — ${{ inputs.topic }}"
+run-name: "Short Cloud Studio — ${{ inputs.request_id }}"
 on:
   workflow_dispatch:
     inputs:
-      topic: { description: Tema do vídeo, required: true, type: string }
-      plan_json: { description: Plano aprovado em JSON, required: true, type: string }
-      duration: { description: Duração alvo, required: true, default: "65", type: string }
-      tone: { description: Tom, required: true, default: cinematic, type: string }
-      niche_key: { description: Nicho, required: true, default: custom, type: string }
-      visual_style: { description: Visual, required: true, default: realistic, type: string }
-      cartoon_style: { description: Estilo do desenho, required: true, default: classic-2d, type: string }
-      media_mode: { description: Mídia, required: true, default: videos, type: string }
-      media_source: { description: Origem visual, required: true, default: auto, type: string }
-      reference_image_b64: { description: Referência visual compactada, required: false, type: string }
-      source_url: { description: Conteúdo original do modo ilustrado, required: false, type: string }
-      source_kind: { description: Tipo do conteúdo original, required: false, default: link, type: string }
-      source_mime: { description: Formato do conteúdo original, required: false, default: application/octet-stream, type: string }
-      doodle_style: { description: Estilo do traço ilustrado, required: false, default: clean-doodle, type: string }
-      voice: { description: Voz, required: true, default: gemini:Charon, type: string }
-      voice_pitch: { description: Tom da voz, required: true, default: default, type: string }
-      voice_speed: { description: Velocidade da voz, required: true, default: default, type: string }
-      captions: { description: Legendas, required: true, default: "on", type: string }
-      caption_font: { description: Fonte, required: true, default: "Montserrat", type: string }
-      caption_size: { description: Tamanho da fonte, required: true, default: "70", type: string }
-      music: { description: Trilha, required: true, default: "off", type: string }
-      music_volume: { description: Volume, required: true, default: medium, type: string }
-      editing_pace: { description: Ritmo da edição, required: true, default: cinematic, type: string }
-      sfx_mode: { description: Efeitos sonoros, required: true, default: "off", type: string }
-      ambience_mode: { description: Ambiência, required: true, default: subtle, type: string }
-      clean_export: { description: Versão sem legenda, required: true, default: "off", type: string }
-      branding_mode: { description: Assinatura visual, required: true, default: "off", type: string }
-      brand_text: { description: Nome do canal, required: false, type: string }
-      request_id: { description: ID, required: false, type: string }
+      request_id: { description: Identificador, required: true, type: string }
+      secure_payload: { description: Configuração protegida da geração, required: true, type: string }
 permissions:
   contents: write
 jobs:
@@ -60,7 +33,7 @@ jobs:
           sudo apt-get install -y ffmpeg fonts-dejavu-core fonts-liberation fonts-montserrat fonts-lato fonts-noto-core fonts-roboto espeak-ng libsndfile1
           fc-cache -f
           python -m pip install --upgrade pip
-          pip install requests==2.32.5 piper-tts==1.7.0 edge-tts==7.2.3 soundfile==0.13.1 Pillow==11.3.0 numpy==2.2.6 google-genai yt-dlp
+          pip install requests==2.32.5 piper-tts==1.7.0 edge-tts==7.2.3 soundfile==0.13.1 Pillow==11.3.0 numpy==2.2.6 google-genai cryptography yt-dlp
           mkdir -p assets
           curl -L --fail --retry 3 -o assets/PatrickHand-Regular.ttf https://raw.githubusercontent.com/google/fonts/main/ofl/patrickhand/PatrickHand-Regular.ttf
       - name: Preparar voz brasileira
@@ -73,91 +46,24 @@ jobs:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GROQ_MODEL: qwen/qwen3.8-27b
+          WORKFLOW_PAYLOAD_SECRET: ${{ secrets.WORKFLOW_PAYLOAD_SECRET }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_TTS_MODEL: gemini-3.1-flash-tts-preview
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           PIPER_MODEL_PATH: models/pt_BR-faber-medium.onnx
           MEDIA_HISTORY_NOTES_PATH: work_turbo/media_history_notes.txt
-          INPUT_REQUEST_ID: ${{ inputs.request_id }}
-          INPUT_VOICE: ${{ inputs.voice }}
-          INPUT_VOICE_PITCH: ${{ inputs.voice_pitch }}
-          INPUT_VOICE_SPEED: ${{ inputs.voice_speed }}
-          INPUT_TOPIC: ${{ inputs.topic }}
-          INPUT_PLAN_JSON: ${{ inputs.plan_json }}
-          INPUT_DURATION: ${{ inputs.duration }}
-          INPUT_TONE: ${{ inputs.tone }}
-          INPUT_NICHE_KEY: ${{ inputs.niche_key }}
-          INPUT_VISUAL_STYLE: ${{ inputs.visual_style }}
-          INPUT_CARTOON_STYLE: ${{ inputs.cartoon_style }}
-          INPUT_MEDIA_MODE: ${{ inputs.media_mode }}
-          INPUT_MEDIA_SOURCE: ${{ inputs.media_source }}
-          INPUT_REFERENCE_IMAGE_B64: ${{ inputs.reference_image_b64 }}
-          INPUT_SOURCE_URL: ${{ inputs.source_url }}
-          INPUT_SOURCE_KIND: ${{ inputs.source_kind }}
-          INPUT_SOURCE_MIME: ${{ inputs.source_mime }}
-          INPUT_DOODLE_STYLE: ${{ inputs.doodle_style }}
-          INPUT_CAPTIONS: ${{ inputs.captions }}
-          INPUT_CAPTION_FONT: ${{ inputs.caption_font }}
-          INPUT_CAPTION_SIZE: ${{ inputs.caption_size }}
-          INPUT_MUSIC: ${{ inputs.music }}
-          INPUT_MUSIC_VOLUME: ${{ inputs.music_volume }}
-          INPUT_CLEAN_EXPORT: ${{ inputs.clean_export }}
-        run: |
-          if [ "$INPUT_NICHE_KEY" = "audio-illustrated" ]; then
-            python scripts/generate_audio_illustrated.py
-          else
-            python scripts/apply_render_policies.py
-            python scripts/generate_entry.py
-            python scripts/validate_religious_media.py
-            python scripts/normalize_duration.py
-          fi
+        run: python scripts/run_secure_generation.py generate
       - name: Aplicar edição dinâmica
         env:
-          INPUT_PLAN_JSON: ${{ inputs.plan_json }}
-          INPUT_DURATION: ${{ inputs.duration }}
-          INPUT_NICHE_KEY: ${{ inputs.niche_key }}
-          INPUT_CAPTIONS: ${{ inputs.captions }}
-          INPUT_CAPTION_FONT: ${{ inputs.caption_font }}
-          INPUT_CAPTION_SIZE: ${{ inputs.caption_size }}
-          INPUT_MUSIC_VOLUME: ${{ inputs.music_volume }}
-          INPUT_EDITING_PACE: ${{ inputs.editing_pace }}
-          INPUT_SFX_MODE: ${{ inputs.sfx_mode }}
-          INPUT_AMBIENCE_MODE: ${{ inputs.ambience_mode }}
-          INPUT_CLEAN_EXPORT: ${{ inputs.clean_export }}
-          INPUT_BRANDING_MODE: ${{ inputs.branding_mode }}
-          INPUT_BRAND_TEXT: ${{ inputs.brand_text }}
-        run: |
-          if [ "$INPUT_NICHE_KEY" != "audio-illustrated" ]; then
-            python scripts/dynamic_finish.py
-            python scripts/normalize_duration.py
-          fi
-          python scripts/prepare_output_name.py
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          WORKFLOW_PAYLOAD_SECRET: ${{ secrets.WORKFLOW_PAYLOAD_SECRET }}
+        run: python scripts/run_secure_generation.py finish
       - name: Validar vídeo
         env:
-          TARGET_DURATION: ${{ inputs.duration }}
-          INPUT_NICHE_KEY: ${{ inputs.niche_key }}
-        run: |
-          VIDEO="output/$(cat output/video_name.txt)"
-          test -s "$VIDEO"
-          python - <<'PY'
-          import json,os,subprocess,sys
-          video='output/'+open('output/video_name.txt',encoding='utf-8').read().strip()
-          data=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',video],text=True))
-          streams=data.get('streams',[])
-          v=next((s for s in streams if s.get('codec_type')=='video'),None)
-          a=next((s for s in streams if s.get('codec_type')=='audio'),None)
-          dur=float(data.get('format',{}).get('duration') or 0)
-          target=float(os.environ['TARGET_DURATION'])
-          if not v or int(v.get('width',0))!=1080 or int(v.get('height',0))!=1920: sys.exit('Resolução final inválida')
-          if v.get('pix_fmt')!='yuv420p': sys.exit(f"Formato de cor incompatível: {v.get('pix_fmt')}")
-          if not a: sys.exit('Áudio final ausente')
-          if abs(dur-target)>0.75: sys.exit(f'Duração final inválida: {dur:.2f}s')
-          minimum_size=150000 if os.environ.get('INPUT_NICHE_KEY')=='audio-illustrated' else 500000
-          if int(data.get('format',{}).get('size') or 0)<minimum_size: sys.exit('Arquivo final pequeno demais')
-          subprocess.run(['ffmpeg','-v','error','-i',video,'-f','null','-'],check=True)
-          print(f'Vídeo validado: 1080x1920, {dur:.2f}s, áudio presente')
-          PY
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          WORKFLOW_PAYLOAD_SECRET: ${{ secrets.WORKFLOW_PAYLOAD_SECRET }}
+        run: python scripts/run_secure_generation.py validate
       - name: Guardar vídeo
         uses: actions/upload-artifact@v4
         with:

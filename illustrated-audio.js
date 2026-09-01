@@ -6682,12 +6682,22 @@ ${newlined}
       setSourceStatus("Enviando arquivo tempor\xE1rio\u2026", "busy", 2);
       try {
         const pathname = `illustrated-inputs/${Date.now()}-${safeName(file.name)}`;
-        const result = await upload(pathname, file, { access: "private", handleUploadUrl: "/api/source-upload", multipart: file.size > 5 * 1024 * 1024, onUploadProgress: ({ percentage }) => setSourceStatus(`Enviando\u2026 ${Math.round(percentage)}%`, "busy", percentage) });
+        const multipart = file.size > 5 * 1024 * 1024, tokenResponse = await nativeFetch("/api/source-upload", { method: "POST", credentials: "same-origin", cache: "no-store", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "blob.generate-client-token", payload: { pathname, clientPayload: null, multipart } }) });
+        let tokenData = {};
+        try {
+          tokenData = await tokenResponse.json();
+        } catch {
+        }
+        if (!tokenResponse.ok) throw Error(tokenData.error || (tokenResponse.status === 401 ? "Sua sess\xE3o expirou. Atualize a p\xE1gina e entre novamente." : "N\xE3o foi poss\xEDvel autorizar o envio agora."));
+        const token = String(tokenData.clientToken || "");
+        if (!token.startsWith("vercel_blob_client_")) throw Error("O armazenamento tempor\xE1rio devolveu uma autoriza\xE7\xE3o inv\xE1lida.");
+        const result = await put(pathname, file, { access: "private", token, multipart, onUploadProgress: ({ percentage }) => setSourceStatus(`Enviando\u2026 ${Math.round(percentage)}%`, "busy", percentage) });
         state.uploadPath = result.pathname;
         setSourceStatus("Arquivo privado enviado e pronto para an\xE1lise.", "ok", 100);
       } catch (error) {
         state.uploadPath = "";
-        setSourceStatus(error?.message?.includes("BLOB") ? "O envio de arquivos ainda n\xE3o est\xE1 configurado no projeto." : error?.message || "N\xE3o foi poss\xEDvel enviar este arquivo.", "bad", 0);
+        const detail = String(error?.message || "");
+        setSourceStatus(detail || "N\xE3o foi poss\xEDvel enviar este arquivo.", "bad", 0);
       } finally {
         state.uploading = false;
         $("chooseIllustratedFile").disabled = false;

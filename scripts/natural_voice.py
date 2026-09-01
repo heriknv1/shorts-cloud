@@ -35,7 +35,12 @@ DEFAULT_VOICE = 'gemini:Sulafat'
 
 def run(cmd, stdin=None, quiet=False):
     if not quiet:
-        print('+', ' '.join(map(str, cmd)), flush=True)
+        shown=[];hide_next=False
+        for item in map(str,cmd):
+            if hide_next:shown.append('[texto protegido]');hide_next=False;continue
+            shown.append(item)
+            if item=='--text':hide_next=True
+        print('+', ' '.join(shown), flush=True)
     kw = {'check': True}
     if stdin is not None: kw['input'] = stdin
     if quiet: kw.update(stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

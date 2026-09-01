@@ -13,6 +13,10 @@ on:
       media_mode: { description: Mídia, required: true, default: videos, type: string }
       media_source: { description: Origem visual, required: true, default: auto, type: string }
       reference_image_b64: { description: Referência visual compactada, required: false, type: string }
+      source_url: { description: Conteúdo original do modo ilustrado, required: false, type: string }
+      source_kind: { description: Tipo do conteúdo original, required: false, default: link, type: string }
+      source_mime: { description: Formato do conteúdo original, required: false, default: application/octet-stream, type: string }
+      doodle_style: { description: Estilo do traço ilustrado, required: false, default: clean-doodle, type: string }
       voice: { description: Voz, required: true, default: gemini:Charon, type: string }
       voice_pitch: { description: Tom da voz, required: true, default: default, type: string }
       voice_speed: { description: Velocidade da voz, required: true, default: default, type: string }
@@ -56,7 +60,9 @@ jobs:
           sudo apt-get install -y ffmpeg fonts-dejavu-core fonts-liberation fonts-montserrat fonts-lato fonts-noto-core fonts-roboto espeak-ng libsndfile1
           fc-cache -f
           python -m pip install --upgrade pip
-          pip install requests==2.32.5 piper-tts==1.7.0 edge-tts==7.2.3 soundfile==0.13.1 Pillow==11.3.0 numpy==2.2.6 google-genai
+          pip install requests==2.32.5 piper-tts==1.7.0 edge-tts==7.2.3 soundfile==0.13.1 Pillow==11.3.0 numpy==2.2.6 google-genai yt-dlp
+          mkdir -p assets
+          curl -L --fail --retry 3 -o assets/PatrickHand-Regular.ttf https://raw.githubusercontent.com/google/fonts/main/ofl/patrickhand/PatrickHand-Regular.ttf
       - name: Preparar voz brasileira
         run: |
           mkdir -p models
@@ -87,16 +93,25 @@ jobs:
           INPUT_MEDIA_MODE: ${{ inputs.media_mode }}
           INPUT_MEDIA_SOURCE: ${{ inputs.media_source }}
           INPUT_REFERENCE_IMAGE_B64: ${{ inputs.reference_image_b64 }}
+          INPUT_SOURCE_URL: ${{ inputs.source_url }}
+          INPUT_SOURCE_KIND: ${{ inputs.source_kind }}
+          INPUT_SOURCE_MIME: ${{ inputs.source_mime }}
+          INPUT_DOODLE_STYLE: ${{ inputs.doodle_style }}
           INPUT_CAPTIONS: ${{ inputs.captions }}
           INPUT_CAPTION_FONT: ${{ inputs.caption_font }}
           INPUT_CAPTION_SIZE: ${{ inputs.caption_size }}
           INPUT_MUSIC: ${{ inputs.music }}
           INPUT_MUSIC_VOLUME: ${{ inputs.music_volume }}
+          INPUT_CLEAN_EXPORT: ${{ inputs.clean_export }}
         run: |
-          python scripts/apply_render_policies.py
-          python scripts/generate_entry.py
-          python scripts/validate_religious_media.py
-          python scripts/normalize_duration.py
+          if [ "$INPUT_NICHE_KEY" = "audio-illustrated" ]; then
+            python scripts/generate_audio_illustrated.py
+          else
+            python scripts/apply_render_policies.py
+            python scripts/generate_entry.py
+            python scripts/validate_religious_media.py
+            python scripts/normalize_duration.py
+          fi
       - name: Aplicar edição dinâmica
         env:
           INPUT_PLAN_JSON: ${{ inputs.plan_json }}
@@ -113,12 +128,15 @@ jobs:
           INPUT_BRANDING_MODE: ${{ inputs.branding_mode }}
           INPUT_BRAND_TEXT: ${{ inputs.brand_text }}
         run: |
-          python scripts/dynamic_finish.py
-          python scripts/normalize_duration.py
+          if [ "$INPUT_NICHE_KEY" != "audio-illustrated" ]; then
+            python scripts/dynamic_finish.py
+            python scripts/normalize_duration.py
+          fi
           python scripts/prepare_output_name.py
       - name: Validar vídeo
         env:
           TARGET_DURATION: ${{ inputs.duration }}
+          INPUT_NICHE_KEY: ${{ inputs.niche_key }}
         run: |
           VIDEO="output/$(cat output/video_name.txt)"
           test -s "$VIDEO"
@@ -135,7 +153,8 @@ jobs:
           if v.get('pix_fmt')!='yuv420p': sys.exit(f"Formato de cor incompatível: {v.get('pix_fmt')}")
           if not a: sys.exit('Áudio final ausente')
           if abs(dur-target)>0.75: sys.exit(f'Duração final inválida: {dur:.2f}s')
-          if int(data.get('format',{}).get('size') or 0)<500000: sys.exit('Arquivo final pequeno demais')
+          minimum_size=150000 if os.environ.get('INPUT_NICHE_KEY')=='audio-illustrated' else 500000
+          if int(data.get('format',{}).get('size') or 0)<minimum_size: sys.exit('Arquivo final pequeno demais')
           subprocess.run(['ffmpeg','-v','error','-i',video,'-f','null','-'],check=True)
           print(f'Vídeo validado: 1080x1920, {dur:.2f}s, áudio presente')
           PY

@@ -4,6 +4,12 @@
       "maxDuration": 60
     }
   },
+  "crons": [
+    {
+      "path": "/api/cleanup-sources",
+      "schedule": "17 4 * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

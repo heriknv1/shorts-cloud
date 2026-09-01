@@ -50,6 +50,6 @@
     }
     return nativeFetch(target,nextInit);
   };
-  function boot(){inject();$('planBtn')?.addEventListener('click',()=>{if(horrorMode&&!$('topic')?.value.trim())$('topic').value=isAnalog()?'Criar uma fita fictícia de terror analógico':isReal()?'Criar um conto real de terror diferente':'Criar uma história original de terror e suspense'},true);['visualStyle','mediaMode','cartoonStyle','captionFont','captionSize','captions','voicePitch','voiceSpeed','music','musicVolume'].forEach(id=>$(id)?.addEventListener('change',()=>setTimeout(syncPreview,0)));document.addEventListener('change',e=>{if(e.target?.id==='mediaSource')setTimeout(syncPreview,0)})}
+  function boot(){inject();$('planBtn')?.addEventListener('click',()=>{if(horrorMode&&!$('topic')?.value.trim())$('topic').value=isAnalog()?'Criar uma fita fictícia de terror analógico':isReal()?'Criar um conto real de terror diferente':'Criar uma história original de terror e suspense'},true);['visualStyle','mediaMode','cartoonStyle','captionFont','captionSize','captions','voicePitch','voiceSpeed','music','musicVolume'].forEach(id=>$(id)?.addEventListener('change',()=>setTimeout(syncPreview,0)));document.addEventListener('change',e=>{if(e.target?.id==='mediaSource')setTimeout(syncPreview,0)});document.addEventListener('shortcloud:preset-selected',e=>{if(!String(e.detail||'').startsWith('horror')&&String(e.detail||'')!=='analog-horror')setMode('')})}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();

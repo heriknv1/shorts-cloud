@@ -5,3 +5,5 @@ soundfile==0.13.1
 misaki-fork[en]==0.9.6
 Pillow==11.3.0
 numpy==2.2.6
+yt-dlp
+cryptography

@@ -52,6 +52,10 @@ Crie:
 
 - `GROQ_API_KEY`
 - `PEXELS_API_KEY`
+- `CF_ACCOUNT_ID`
+- `CF_API_TOKEN`
+
+Os dois últimos ativam a criação de imagens com referência visual e são obrigatórios para manter os mesmos personagens no modo Áudio Ilustrado.
 
 Não coloque essas chaves em arquivos do projeto.
 
@@ -94,8 +98,27 @@ Em `Settings > Environment Variables`, crie:
 - `GROQ_API_KEY` = sua chave Groq (somente para o botão “Sugerir 3”)
 - `GROQ_MODEL` = `qwen/qwen3.8-27b`
 - `APP_PIN` = crie um PIN forte que só você saiba
+- `CRON_SECRET` = uma senha aleatória longa para autorizar a limpeza diária de arquivos temporários
+
+Para aceitar arquivos no modo **Áudio Ilustrado**, conecte também um **Blob Store privado** ao projeto. A plataforma adicionará automaticamente `BLOB_READ_WRITE_TOKEN`. Os uploads recebem nomes aleatórios, só são liberados ao processamento por endereços assinados temporários e o processo diário remove arquivos com mais de 24 horas. O storyboard intermediário fica criptografado em um artefato temporário de um dia, não em uma publicação pública do repositório.
 
 Faça um novo deploy.
+
+## Modo Áudio Ilustrado
+
+Esse modo aceita áudio, vídeo ou link público e preserva o áudio original. O fluxo:
+
+1. Baixa o conteúdo em processamento isolado.
+2. Transcreve a fala com marcações de tempo.
+3. Extrai doze momentos do vídeo e os analisa em três painéis.
+4. Cria personagens originais e uma ficha visual fixa.
+5. Recusa storyboards vagos e exige ação, reação ou piada visual em cada beat.
+6. Gera todos os desenhos usando a mesma referência de personagens.
+7. Faz uma revisão visual conjunta e recria cenas incoerentes.
+8. Mantém desenhos estáveis, cortes sincronizados, palavras no alto e legendas opcionais embaixo.
+9. Entrega em 1080×1920, 30 fps, H.264/AAC e sem movimento artificial de câmera.
+
+Links dependem de acesso público pela plataforma de origem. Quando um site bloquear a leitura automatizada, envie o arquivo diretamente.
 
 ## 7. Uso diário
 

@@ -1,0 +1,56 @@
+name: Analyze Illustrated Source
+run-name: "Análise ilustrada — ${{ inputs.request_id }}"
+on:
+  workflow_dispatch:
+    inputs:
+      source_url: { description: Endereço do conteúdo, required: true, type: string }
+      source_kind: { description: Tipo da entrada, required: true, default: link, type: string }
+      source_mime: { description: Tipo do arquivo, required: true, default: application/octet-stream, type: string }
+      source_name: { description: Nome do conteúdo, required: true, default: conteudo, type: string }
+      user_context: { description: Orientação adicional, required: false, type: string }
+      doodle_style: { description: Estilo do traço, required: true, default: clean-doodle, type: string }
+      request_id: { description: Identificador, required: true, type: string }
+      plan_key: { description: Chave temporária do storyboard, required: true, type: string }
+permissions:
+  contents: read
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Preparar o Studio
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Preparar recursos de análise
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Baixar e preparar o conteúdo
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-dejavu-core fonts-liberation
+          python -m pip install --upgrade pip
+          pip install requests==2.32.5 Pillow==11.3.0 cryptography yt-dlp
+      - name: Transcrever e compreender
+        run: echo "Preparando transcrição e quadros temporizados."
+      - name: Criar storyboard ilustrado
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL: qwen/qwen3.8-27b
+          INPUT_SOURCE_URL: ${{ inputs.source_url }}
+          INPUT_SOURCE_KIND: ${{ inputs.source_kind }}
+          INPUT_SOURCE_MIME: ${{ inputs.source_mime }}
+          INPUT_SOURCE_NAME: ${{ inputs.source_name }}
+          INPUT_USER_CONTEXT: ${{ inputs.user_context }}
+          INPUT_DOODLE_STYLE: ${{ inputs.doodle_style }}
+          INPUT_REQUEST_ID: ${{ inputs.request_id }}
+          INPUT_PLAN_KEY: ${{ inputs.plan_key }}
+        run: python scripts/analyze_illustrated_source.py
+      - name: Disponibilizar storyboard
+        uses: actions/upload-artifact@v4
+        with:
+          name: storyboard-${{ inputs.request_id }}
+          path: output/illustrated_plan.enc
+          retention-days: 1

@@ -157,8 +157,8 @@ def cf_klein(prompt,path,seed,reference=None):
     ref=_reference_file(reference)
     files={
         'prompt':(None,prompt[:3500]),
-        'width':(None,'768'),
-        'height':(None,'1344'),
+        'width':(None,'1080'),
+        'height':(None,'1920'),
         'seed':(None,str(seed)),
     }
     if ref:

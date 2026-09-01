@@ -29,8 +29,8 @@ def cf_klein(prompt, path, seed, reference=None):
                 ref.seek(0)
             files = {
                 'prompt': (None, prompt[:3500]),
-                'width': (None, '768'),
-                'height': (None, '1344'),
+                'width': (None, '1080'),
+                'height': (None, '1920'),
                 'seed': (None, str(int(seed))),
                 'guidance': (None, '3.5'),
             }

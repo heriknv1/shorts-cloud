@@ -4,7 +4,15 @@
   "private": true,
   "description": "Studio cloud de Shorts com planejamento por cenas, Groq Vision, Pexels, voz neural e GitHub Actions",
   "scripts": {
+    "build": "esbuild src/illustrated-audio.js --bundle --format=iife --platform=browser --target=es2020 --outfile=illustrated-audio.js",
     "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@vercel/blob": "2.8.0",
+    "fflate": "0.8.2"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
   },
   "engines": {
     "node": ">=20"

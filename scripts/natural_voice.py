@@ -72,7 +72,7 @@ def selected_profile():
 def director_prompt(spoken):
     requested=os.getenv('INPUT_VOICE',DEFAULT_VOICE)
     pitch_mode,speed_mode,_,_,_=voice_settings(); tone=os.getenv('INPUT_TONE','cinematic').strip().lower(); niche=os.getenv('INPUT_NICHE_KEY','custom').strip().lower(); _,_,profile=selected_profile()
-    pace={'default':'natural conversational pacing, fluid and human','fast':'noticeably faster than normal, energetic and fluid while keeping every word clear','veryfast':'very brisk short-form narration, approximately one quarter faster than normal, energetic but still natural and intelligible'}.get(speed_mode,'natural conversational pacing, fluid and human')
+    pace={'default':'calm, unhurried conversational pacing with brief natural pauses between ideas','fast':'noticeably faster than normal, energetic and fluid while keeping every word clear','veryfast':'very brisk short-form narration, approximately one quarter faster than normal, energetic but still natural and intelligible'}.get(speed_mode,'calm, unhurried conversational pacing with brief natural pauses between ideas')
     register={'low':'lower vocal register, full chest resonance and warm low-frequency presence, never artificially pitch-shifted','default':'comfortable neutral vocal register','high':'slightly brighter vocal register, still natural and relaxed'}.get(pitch_mode,'comfortable neutral vocal register')
     if requested in {'gemini:AlgenibDeep','gemini:GacruxDeep'}: register='distinctly deep adult male vocal register with rich chest resonance, calm authority, warmth and natural human texture; avoid synthetic bass, distortion or announcer-like delivery'
     mood={'cinematic':'cinematic, intimate and emotionally engaging without sounding theatrical','documentary':'credible, informative and conversational, like a premium documentary narrator','dramatic':'emotionally present and dramatic with restraint, never exaggerated','energetic':'energetic and charismatic without shouting or sounding like an advertisement'}.get(tone,'natural, engaging and conversational')
@@ -103,7 +103,7 @@ TRANSCRIPT END'''
 def polish_voice(src,dst,apply_speed=True):
     _,speed_mode,_,_,tempo=voice_settings()
     filters=['highpass=f=65','lowpass=f=13500','acompressor=threshold=-20dB:ratio=1.45:attack=30:release=260:makeup=1.12']
-    if apply_speed and speed_mode!='default': filters.append(f'atempo={tempo:.4f}')
+    if apply_speed and abs(tempo-1.0)>.001: filters.append(f'atempo={tempo:.4f}')
     filters.append('alimiter=limit=0.95')
     run(['ffmpeg','-y','-i',str(src),'-af',','.join(filters),'-ar','48000','-ac','1','-c:a','pcm_s16le',str(dst)],quiet=True)
 
@@ -112,7 +112,7 @@ def postprocess_fallback_voice(src,dst):
     pitch_mode,speed_mode,_,_,tempo=voice_settings(); ratio={'low':0.965,'default':1.0,'high':1.03}.get(pitch_mode,1.0); filters=[]
     if requested in {'gemini:AlgenibDeep','gemini:GacruxDeep'}: ratio=0.955
     if abs(ratio-1.0)>.001: filters += [f'asetrate=48000*{ratio:.4f}','aresample=48000',f'atempo={1/ratio:.4f}']
-    if speed_mode!='default': filters.append(f'atempo={tempo:.4f}')
+    if abs(tempo-1.0)>.001: filters.append(f'atempo={tempo:.4f}')
     filters += ['highpass=f=60','lowpass=f=12500','acompressor=threshold=-19dB:ratio=1.5:attack=28:release=240','alimiter=limit=0.95']
     run(['ffmpeg','-y','-i',str(src),'-af',','.join(filters),'-ar','48000','-ac','1','-c:a','pcm_s16le',str(dst)],quiet=True)
 

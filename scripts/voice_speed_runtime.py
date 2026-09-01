@@ -10,8 +10,8 @@ def install(natural_voice):
         if speed_mode not in {'default','fast','veryfast'}: speed_mode='default'
         if requested in {'gemini:AlgenibDeep','gemini:GacruxDeep'}: pitch_mode='low'
         pitch={'low':'-8Hz','default':'+0Hz','high':'+7Hz'}.get(pitch_mode,'+0Hz')
-        edge_rate={'default':'+0%','fast':'+5%','veryfast':'+10%'}.get(speed_mode,'+0%')
-        tempo={'default':1.0,'fast':1.05,'veryfast':1.10}.get(speed_mode,1.0)
+        edge_rate={'default':'-4%','fast':'+5%','veryfast':'+10%'}.get(speed_mode,'-4%')
+        tempo={'default':0.96,'fast':1.05,'veryfast':1.10}.get(speed_mode,0.96)
         return pitch_mode,speed_mode,pitch,edge_rate,tempo
     natural_voice.voice_settings=voice_settings
     print('Velocidade de narração alinhada ao perfil natural.',flush=True)

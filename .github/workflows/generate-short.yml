@@ -132,9 +132,11 @@ jobs:
           dur=float(data.get('format',{}).get('duration') or 0)
           target=float(os.environ['TARGET_DURATION'])
           if not v or int(v.get('width',0))!=1080 or int(v.get('height',0))!=1920: sys.exit('Resolução final inválida')
+          if v.get('pix_fmt')!='yuv420p': sys.exit(f"Formato de cor incompatível: {v.get('pix_fmt')}")
           if not a: sys.exit('Áudio final ausente')
           if abs(dur-target)>0.75: sys.exit(f'Duração final inválida: {dur:.2f}s')
           if int(data.get('format',{}).get('size') or 0)<500000: sys.exit('Arquivo final pequeno demais')
+          subprocess.run(['ffmpeg','-v','error','-i',video,'-f','null','-'],check=True)
           print(f'Vídeo validado: 1080x1920, {dur:.2f}s, áudio presente')
           PY
       - name: Guardar vídeo

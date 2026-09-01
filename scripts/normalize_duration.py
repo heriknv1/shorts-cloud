@@ -15,7 +15,7 @@ ratio=current/target
 if ratio<0.5 or ratio>2.0: raise SystemExit(f'Duração fora de faixa segura: {current:.2f}s para alvo {target:.2f}s')
 # atempo accepts 0.5..2.0; video PTS factor is target/current.
 tmp=src.with_name('final_duration_fixed.mp4')
-cmd=['ffmpeg','-y','-i',str(src),'-filter_complex',f'[0:v]setpts={target/current:.8f}*PTS[v];[0:a]atempo={ratio:.8f}[a]','-map','[v]','-map','[a]','-t',f'{target:.3f}','-c:v','libx264','-preset','veryfast','-crf','22','-c:a','aac','-b:a','192k','-movflags','+faststart',str(tmp)]
+cmd=['ffmpeg','-y','-i',str(src),'-filter_complex',f'[0:v]setpts={target/current:.8f}*PTS,fps=30,format=yuv420p[v];[0:a]atempo={ratio:.8f}[a]','-map','[v]','-map','[a]','-t',f'{target:.3f}','-c:v','libx264','-preset','veryfast','-crf','22','-pix_fmt','yuv420p','-profile:v','high','-level','4.1','-c:a','aac','-b:a','192k','-movflags','+faststart',str(tmp)]
 subprocess.run(cmd,check=True)
 tmp.replace(src)
 print(json.dumps({'before':current,'target':target},ensure_ascii=False))

@@ -5,6 +5,13 @@
       "maxDuration": 60
     }
   },
+  "rewrites": [
+    {"source": "/api/source-upload", "destination": "/api/generate?__sc_route=source-upload"},
+    {"source": "/api/illustrated-plan", "destination": "/api/plan?__sc_route=illustrated-plan"},
+    {"source": "/api/illustrated-status", "destination": "/api/status?__sc_route=illustrated-status"},
+    {"source": "/api/illustrated-cancel", "destination": "/api/status?__sc_route=illustrated-cancel"},
+    {"source": "/api/cleanup-sources", "destination": "/api/status?__sc_route=cleanup-sources"}
+  ],
   "crons": [
     {
       "path": "/api/cleanup-sources",

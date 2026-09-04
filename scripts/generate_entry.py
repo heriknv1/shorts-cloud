@@ -7,6 +7,7 @@ from pathlib import Path
 from PIL import Image
 
 import generate_turbo_v2 as turbo
+import cinematic_runtime
 import flux_runtime
 import media_history
 import natural_voice
@@ -64,6 +65,7 @@ def strict_reference_image(reference_path):
 def install_runtime():
     flux_runtime.install()
     voice_speed_runtime.install(natural_voice)
+    cinematic_runtime.install(turbo,natural_voice)
     turbo.synthesize=natural_voice.synthesize
     media_history.install(turbo)
     original_generate=turbo.generate_scene_image
@@ -73,7 +75,7 @@ def install_runtime():
         fresh['visual_query']=f"{scene.get('visual_query','')} fresh-take-{run_salt}-{idx}"
         return original_generate(fresh,path,visual_context,style,niche,idx,realistic,reference)
     turbo.generate_scene_image=fresh_generate
-    print('Motores de imagem e narração preparados.',flush=True)
+    print('Motores de imagem, continuidade cinematográfica e narração preparados.',flush=True)
 
 
 def main():

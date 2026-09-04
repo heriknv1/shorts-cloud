@@ -1,8 +1,9 @@
 (()=>{
-  let submitting=false,cancelling=false,activeRunId=null,lastKnownActive=false,startedAt=0,statusBusy=false,pollTimer=null,statusInitialized=false,audioContext=null;
+  let submitting=false,cancelling=false,activeRunId=null,lastKnownActive=false,startedAt=0,statusBusy=false,pollTimer=null,statusInitialized=false,audioContext=null,requestAccepted=false;
   const $=id=>document.getElementById(id);
   const setProp=(el,key,value)=>{if(el&&el[key]!==value)el[key]=value};
   const watchedRuns=new Set(),notifiedRuns=new Set();
+  const baseFetch=window.fetch.bind(window);
 
   function prepareCompletionAlert(){
     try{const AudioCtx=window.AudioContext||window.webkitAudioContext;if(AudioCtx&&!audioContext)audioContext=new AudioCtx();audioContext?.resume?.()}catch{}
@@ -40,9 +41,38 @@
   function setNote(text,error=false){const ui=ensureUI();if(!ui)return;if(ui.note.textContent!==String(text||''))ui.note.textContent=text||'';ui.note.style.color=error?'#ffb4b4':''}
   function applyLock(){
     const ui=ensureUI();if(!ui)return;const locked=submitting||lastKnownActive||cancelling;
-    if(locked){setProp(ui.generate,'disabled',true);ui.generate.textContent=lastKnownActive?'Geração em andamento':'Iniciando…';setProp(ui.cancel,'hidden',false);setProp(ui.cancel,'disabled',cancelling);ui.cancel.textContent=cancelling?'Cancelando…':'Cancelar geração'}
-    else{setProp(ui.cancel,'hidden',true);setProp(ui.cancel,'disabled',false);ui.cancel.textContent='Cancelar geração';ui.generate.textContent='Gerar vídeo'}
+    if(locked){
+      setProp(ui.generate,'disabled',true);
+      ui.generate.textContent=lastKnownActive?'Geração em andamento':requestAccepted?'Confirmando geração…':'Iniciando…';
+      setProp(ui.cancel,'hidden',!lastKnownActive);
+      setProp(ui.cancel,'disabled',cancelling);
+      ui.cancel.textContent=cancelling?'Cancelando…':'Cancelar geração';
+    }else{
+      setProp(ui.cancel,'hidden',true);setProp(ui.cancel,'disabled',false);ui.cancel.textContent='Cancelar geração';ui.generate.textContent='Gerar vídeo';
+    }
   }
+
+  async function trackedFetch(input,init){
+    const url=typeof input==='string'?input:input?.url||'';
+    if(!String(url).includes('/api/generate'))return baseFetch(input,init);
+    try{
+      const response=await baseFetch(input,init);
+      if(response.ok){
+        requestAccepted=true;
+        setNote('Solicitação recebida. Aguardando a geração aparecer no progresso…');
+        applyLock();
+        setTimeout(readStatus,700);setTimeout(readStatus,2200);setTimeout(readStatus,5000);
+      }else{
+        let error='Não foi possível iniciar a geração agora.';
+        try{const data=await response.clone().json();if(data?.error)error=data.error}catch{}
+        submitting=false;requestAccepted=false;applyLock();setNote(error,true);
+      }
+      return response;
+    }catch(error){
+      submitting=false;requestAccepted=false;applyLock();setNote('A conexão falhou antes de confirmar a geração. Tente novamente.',true);throw error;
+    }
+  }
+  window.fetch=trackedFetch;
 
   async function readStatus(){
     if(statusBusy)return null;statusBusy=true;
@@ -52,8 +82,12 @@
       if(statusInitialized){for(const run of runs){const id=String(run.id||'');if(run.status!=='completed')watchedRuns.add(id);else if(run.conclusion==='success'&&watchedRuns.has(id))notifyCompletion(run)}}
       else statusInitialized=true;
       lastKnownActive=!!active;activeRunId=active?.id||null;
-      if(active){submitting=false;setNote('Seu vídeo está sendo criado. Você pode cancelar com segurança enquanto estiver em andamento.')}
-      else if(submitting&&Date.now()-startedAt>15000){submitting=false;setNote('A solicitação não foi confirmada. Você pode tentar novamente.',true)}
+      if(active){submitting=false;requestAccepted=true;setNote('Seu vídeo está sendo criado. Você pode cancelar com segurança enquanto estiver em andamento.')}
+      else if(submitting){
+        const elapsed=Date.now()-startedAt;
+        if(requestAccepted&&elapsed>120000){submitting=false;requestAccepted=false;setNote('A plataforma recebeu o pedido, mas o progresso não apareceu após 2 minutos. Atualize antes de tentar novamente.',true)}
+        else if(elapsed>20000)setNote(requestAccepted?'Solicitação recebida. O progresso está demorando alguns segundos para aparecer; não envie novamente.':'Preparando sua geração. Esta etapa pode levar alguns segundos; não envie novamente.');
+      }
       applyLock();return d;
     }catch{return null}finally{statusBusy=false}
   }
@@ -63,12 +97,12 @@
       await new Promise(r=>setTimeout(r,1000));const d=await readStatus();if(!d)continue;
       const target=(d.runs||[]).find(x=>String(x.id)===String(targetId));
       if(target?.status==='completed'){
-        cancelling=false;submitting=false;lastKnownActive=false;activeRunId=null;applyLock();
+        cancelling=false;submitting=false;requestAccepted=false;lastKnownActive=false;activeRunId=null;applyLock();
         if(target.conclusion==='cancelled')setNote('Geração cancelada. Ela não será contabilizada na sua cota diária.');
         else if(target.conclusion==='success')setNote('O vídeo terminou antes que o cancelamento pudesse ser concluído.',true);
         else setNote('A geração foi encerrada e não foi concluída.');return;
       }
-      if(!(d.runs||[]).some(x=>x.status!=='completed')){cancelling=false;submitting=false;lastKnownActive=false;activeRunId=null;applyLock();setNote('A geração foi encerrada.');return}
+      if(!(d.runs||[]).some(x=>x.status!=='completed')){cancelling=false;submitting=false;requestAccepted=false;lastKnownActive=false;activeRunId=null;applyLock();setNote('A geração foi encerrada.');return}
     }
     cancelling=false;applyLock();setNote('O cancelamento ainda está sendo confirmado. Atualize o progresso em alguns segundos.')
   }
@@ -82,8 +116,8 @@
   function interceptGenerate(e){
     if(submitting||lastKnownActive||cancelling){e.preventDefault();e.stopImmediatePropagation();return}
     prepareCompletionAlert();
-    submitting=true;startedAt=Date.now();applyLock();setNote('Iniciando a criação. O botão fica bloqueado para evitar envios duplicados.');
-    setTimeout(readStatus,1200);setTimeout(readStatus,3500);setTimeout(readStatus,7000);
+    submitting=true;requestAccepted=false;startedAt=Date.now();applyLock();setNote('Iniciando a criação. Aguarde a confirmação sem tocar novamente no botão.');
+    setTimeout(readStatus,1200);setTimeout(readStatus,3500);setTimeout(readStatus,7000);setTimeout(readStatus,15000);
   }
 
   function boot(){const ui=ensureUI();if(!ui)return;ui.generate.addEventListener('click',interceptGenerate,true);readStatus();pollTimer=setInterval(readStatus,5000);window.addEventListener('beforeunload',()=>pollTimer&&clearInterval(pollTimer),{once:true})}

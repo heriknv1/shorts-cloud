@@ -3,6 +3,7 @@ const { requireAuth } = require('../lib/auth');
 const {narrationWordCount,minNarrationWords}=require('../lib/content-freshness');
 const {validPrivateSourcePath,signPrivateSource}=require('../lib/source-access');
 const sourceUploadHandler=require('../lib/source-upload-handler');
+const scaleHandler=require('../lib/scale-handler');
 const {sealWorkflowPayload}=require('../lib/secure-workflow-payload');
 const DAILY_LIMIT=10;
 const BLOCKED_RX=/\b(catholic|católico|católica|catolicismo|cathedral|catedral|pope|papa|papal|rosary|terço|crucifix|crucifixo|statue|estátua|saint|santo|santa|virgin mary|virgem maria|madonna|marian|mariana|mass|missa|monstrance|ostensório|basilica|basílica|islam|islã|islão|islamic|islâmico|islâmica|muslim|muçulmano|muçulmana|mosque|mesquita|quran|corão|koran|mecca|meca|medina|ramadan|minaret|minarete|imam|candomblé|candomble|umbanda|orixá|orixa|orisha|terreiro|pombagira|pomba gira|iemanjá|iemanja|ogum|oxum|oxóssi|oxossi|xangô|xango|iansã|iansa|obaluaiê|obaluae)\b/i;
@@ -36,6 +37,7 @@ async function finalCreativeReview(plan,{topic,presetKey,tone,visualStyle,mediaM
 }
 module.exports=async function handler(req,res){
  if(req.query?.__sc_route==='source-upload')return sourceUploadHandler(req,res);
+ if(req.query?.__sc_route==='scale')return scaleHandler(req,res);
  if(req.method!=='POST')return res.status(405).json({error:'Use POST.'});if(!requireAuth(req,res))return;
  try{
   const activeData=await workflowRuns();const active=(activeData.workflow_runs||[]).find(r=>r.name==='Generate Short'&&r.status!=='completed');if(active)return res.status(409).json({error:'Já existe uma geração em andamento. Aguarde concluir ou cancele antes de iniciar outra.',active:true});

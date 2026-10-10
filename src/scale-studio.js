@@ -153,6 +153,9 @@ import { put } from '@vercel/blob/client';
     if (!state.file) return notice('Escolha um vídeo original.', 'error');
     if (!titles.length || el.titles.value.split(/\r?\n/).filter(v => v.trim()).length > LIMIT) return notice('Informe entre 1 e 12 títulos, um por linha.', 'error');
     if (!el.end.value.trim() || !Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end - start < 2 || end - start > 120 || (state.duration && end > state.duration + .3)) return notice('Defina um trecho válido de 2 a 120 segundos, dentro da duração do vídeo.', 'error');
+    const geminiAutoCut = $('scaleGeminiCut').checked;
+    if (geminiAutoCut && state.duration > 600) return notice('O corte com Gemini aceita vídeos com até 10 minutos. Desative a análise para usar o intervalo manual.', 'error');
+    if (geminiAutoCut && !$('scaleGeminiConsent').checked) return notice('Autorize o envio temporário do vídeo ao Gemini para usar o corte automático.', 'error');
     if (!$('scaleRights').checked || !$('scalePublic').checked) return notice('Marque as duas confirmações de direitos e privacidade.', 'error');
     isBusy(true);
     try {
@@ -165,7 +168,8 @@ import { put } from '@vercel/blob/client';
           sourceName:state.file.name,topic:el.topic.value.trim(),titles,
           template:state.template,framing:el.framing.value,
           accent:$('scaleAccent').value,textSize:$('scaleSize').value,
-          startAt:start,endAt:end,rightsConfirmed:true,publicReleaseAcknowledged:true
+          startAt:start,endAt:end,rightsConfirmed:true,publicReleaseAcknowledged:true,
+          geminiAutoCut,geminiConsent:geminiAutoCut && $('scaleGeminiConsent').checked
         })
       });
       notice('Lote enviado com sucesso! ' + result.count + ' variações serão produzidas. Acompanhe na aba Criações e downloads.', 'ok');
@@ -180,12 +184,12 @@ import { put } from '@vercel/blob/client';
     if (topic.length < 6) return notice('Escreva o assunto do vídeo para receber sugestões da IA.', 'error');
     isBusy(true);
     try {
-      notice('Gerando títulos alternativos com IA...');
+      notice('Pedindo títulos alternativos ao Gemini Flash-Lite...');
       const data = await request('/api/scale',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'suggest',topic,count:8})});
       if (!Array.isArray(data.titles) || !data.titles.length) throw Error('A IA não retornou sugestões.');
       el.titles.value = data.titles.join('\n');
       updateCount();
-      notice(data.titles.length + ' títulos sugeridos. Revise os textos antes de gerar.', 'ok');
+      notice(data.titles.length + ' títulos sugeridos pelo Gemini. Revise os textos antes de gerar.', 'ok');
     } catch (error) {
       notice(error.message || 'Falha ao sugerir títulos.', 'error');
     } finally { isBusy(false); }
@@ -291,6 +295,11 @@ import { put } from '@vercel/blob/client';
     document.querySelectorAll('.scale-template').forEach(x => {x.classList.toggle('selected',x === b);x.setAttribute('aria-pressed',String(x === b));});
     updatePreview();
   }));
+  $('scaleGeminiCut').addEventListener('change',() => {
+    const enabled = $('scaleGeminiCut').checked;
+    $('scaleGeminiConsentWrap').hidden = !enabled;
+    if (!enabled) $('scaleGeminiConsent').checked = false;
+  });
   el.file.addEventListener('change',onFile);
   el.titles.addEventListener('input',updateCount);
   el.framing.addEventListener('change',updatePreview);

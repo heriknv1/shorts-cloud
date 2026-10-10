@@ -1,0 +1,60 @@
+name: Scale Studio
+run-name: "Studio Scale — ${{ inputs.request_id }}"
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: Identificador do lote
+        required: true
+        type: string
+      secure_payload:
+        description: Configuração criptografada do lote
+        required: true
+        type: string
+permissions:
+  contents: write
+concurrency:
+  group: shorts-cloud-scale
+  cancel-in-progress: false
+jobs:
+  render:
+    name: Renderizar vídeos em escala
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Preparar projeto
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Instalar FFmpeg e dependências
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
+          python -m pip install requests==2.32.5 cryptography
+      - name: Renderizar todas as variações
+        env:
+          WORKFLOW_PAYLOAD_SECRET: ${{ secrets.WORKFLOW_PAYLOAD_SECRET }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: python scripts/scale_render.py
+      - name: Salvar cópia temporária
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-scale-${{ github.run_id }}
+          path: |
+            output/scale_batch/*.mp4
+            output/scale_batch/manifest.json
+          retention-days: 2
+          compression-level: 0
+      - name: Publicar lote para download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "scale-${GITHUB_RUN_ID}" \
+            output/scale_batch/*.mp4 \
+            output/scale_batch/manifest.json \
+            --title "Studio Scale — lote ${GITHUB_RUN_ID}" \
+            --notes "Variações geradas a partir de conteúdo enviado com autorização. Os downloads podem ser públicos se este repositório for público."

@@ -181,3 +181,22 @@ Também é recomendável acrescentar progressivamente elementos autorais: identi
 - O site exige `APP_PIN` antes de acessar status, ideias ou geração. O PIN não substitui autenticação profissional, mas evita deixar o painel aberto para qualquer visitante casual.
 - Mantenha as chaves apenas em Secrets do GitHub e Environment Variables da Vercel.
 - Restrinja o PAT a um único repositório.
+
+
+## Studio Scale — produção em escala (outubro/2026)
+
+Rota independente: `/scale.html` (acessível também pelo novo botão na página inicial). Essa área não altera o fluxo original de criação de Shorts.
+
+- Envie vídeo original de até 200 MB para Vercel Blob privado, com a autorização do titular.
+- Escolha trecho de 2 a 120 s, enquadramento 9:16, um dos templates Impacto / Minimalista / Notícia, cor e tamanho dos títulos.
+- Crie até 12 versões MP4 por lote, com títulos independentes e áudio original quando disponível. Opcionalmente, peça 8 sugestões de títulos ao Groq.
+- O workflow `scale-studio.yml` executa `scripts/scale_render.py` com FFmpeg, valida os vídeos e cria uma Release com os MP4 e um manifesto JSON. Veja os downloads na aba Criações e downloads.
+- Planejador de posts: armazena rascunhos somente no navegador. **Não publica nem agenda automaticamente na rede social**. Integração OAuth e postagem via APIs oficiais ainda não implementadas.
+- **Privacidade**: o arquivo-fonte enviado ao Blob é privado; os vídeos finais em GitHub Releases podem ser publicamente acessíveis se o repositório for público. O painel solicita confirmação explícita antes da geração.
+- Não há download de posts de terceiros, repost automático, biblioteca de vídeos comerciais, analytics sociais ou Claude MCP. Esses recursos não fazem parte desta entrega.
+
+### Configuração
+
+A Vercel precisa de `GITHUB_PAT`, `TARGET_REPO`, `APP_USERNAME`, `APP_PASSWORD`, `AUTH_SECRET`, `BLOB_READ_WRITE_TOKEN` e `WORKFLOW_PAYLOAD_SECRET` (ou a alternativa já usada no Studio). Para sugestões com IA, configure `GROQ_API_KEY` e opcionalmente `GROQ_MODEL`.
+
+Configure no GitHub Actions o secret `WORKFLOW_PAYLOAD_SECRET` com exatamente o mesmo valor da Vercel. O workflow permite fallback para `GROQ_API_KEY` caso a variável de payload não exista em ambos os ambientes. O build gera `scale-studio.js` pelo esbuild junto ao bundle original da página de áudio ilustrado. O novo endpoint `/api/scale` é reescrito para a função existente `/api/generate`, evitando ultrapassar o limite de funções Vercel Hobby.

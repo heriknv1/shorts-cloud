@@ -6,11 +6,30 @@
     }
   },
   "rewrites": [
-    {"source": "/api/source-upload", "destination": "/api/generate?__sc_route=source-upload"},
-    {"source": "/api/illustrated-plan", "destination": "/api/plan?__sc_route=illustrated-plan"},
-    {"source": "/api/illustrated-status", "destination": "/api/status?__sc_route=illustrated-status"},
-    {"source": "/api/illustrated-cancel", "destination": "/api/status?__sc_route=illustrated-cancel"},
-    {"source": "/api/cleanup-sources", "destination": "/api/status?__sc_route=cleanup-sources"}
+    {
+      "source": "/api/source-upload",
+      "destination": "/api/generate?__sc_route=source-upload"
+    },
+    {
+      "source": "/api/scale",
+      "destination": "/api/generate?__sc_route=scale"
+    },
+    {
+      "source": "/api/illustrated-plan",
+      "destination": "/api/plan?__sc_route=illustrated-plan"
+    },
+    {
+      "source": "/api/illustrated-status",
+      "destination": "/api/status?__sc_route=illustrated-status"
+    },
+    {
+      "source": "/api/illustrated-cancel",
+      "destination": "/api/status?__sc_route=illustrated-cancel"
+    },
+    {
+      "source": "/api/cleanup-sources",
+      "destination": "/api/status?__sc_route=cleanup-sources"
+    }
   ],
   "crons": [
     {
@@ -22,9 +41,18 @@
     {
       "source": "/(.*)",
       "headers": [
-        {"key": "X-Content-Type-Options", "value": "nosniff"},
-        {"key": "Referrer-Policy", "value": "strict-origin-when-cross-origin"},
-        {"key": "X-Frame-Options", "value": "DENY"}
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        }
       ]
     }
   ]

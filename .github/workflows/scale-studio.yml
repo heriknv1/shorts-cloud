@@ -34,11 +34,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core
-          python -m pip install requests==2.32.5 cryptography
+          python -m pip install requests==2.32.5 cryptography google-genai
       - name: Renderizar todas as variações
         env:
           WORKFLOW_PAYLOAD_SECRET: ${{ secrets.WORKFLOW_PAYLOAD_SECRET }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python scripts/scale_render.py
       - name: Salvar cópia temporária
         uses: actions/upload-artifact@v4

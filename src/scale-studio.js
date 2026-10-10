@@ -68,7 +68,7 @@ import { put } from '@vercel/blob/client';
   function guessMime(file) {
     const known = {
       mp4:'video/mp4',mov:'video/quicktime',webm:'video/webm',m4v:'video/x-m4v',
-      mpg:'video/mpeg',mpeg:'video/mpeg',ogv:'video/ogg',3gp:'video/3gpp',mkv:'video/x-matroska'
+      mpg:'video/mpeg',mpeg:'video/mpeg',ogv:'video/ogg','3gp':'video/3gpp',mkv:'video/x-matroska'
     };
     const ext = (file.name.split('.').pop() || '').toLowerCase();
     return known[ext] || file.type;

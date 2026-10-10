@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#080c18">
+  <meta name="description" content="Studio Scale: transforme seus vídeos em múltiplas versões verticais no Shorts Cloud.">
+  <title>Studio Scale | Shorts Cloud</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/scale.css">
+</head>
+<body class="scale-body">
+  <main class="scale-shell">
+    <header class="scale-topbar">
+      <a class="scale-back" href="/" aria-label="Voltar ao Shorts Cloud">← Estúdio principal</a>
+      <span class="scale-logo">SHORTS CLOUD <strong> / STUDIO SCALE</strong></span>
+      <button class="scale-logout" type="button" onclick="shortsCloudLogout()">Sair</button>
+    </header>
+    <section class="scale-hero">
+      <div>
+        <div class="scale-kicker">PRODUÇÃO EM ESCALA • ÁREA INDEPENDENTE</div>
+        <h1>Um vídeo. <span>Várias versões.</span></h1>
+        <p>Envie um vídeo seu, personalize o formato, crie títulos diferentes e receba um lote de MP4 verticais, prontos para baixar e publicar.</p>
+      </div>
+      <div class="scale-hero-steps"><span>01 <b>Envie</b></span><span>02 <b>Personalize</b></span><span>03 <b>Multiplique</b></span></div>
+    </section>
+    <nav class="scale-nav" aria-label="Seções do Studio Scale">
+      <button type="button" class="is-active" data-pane="create">✦ Multiplicar vídeos</button>
+      <button type="button" data-pane="history">▣ Criações e downloads</button>
+      <button type="button" data-pane="calendar">◷ Planejar publicações</button>
+    </nav>
+    <div id="scaleNotice" class="scale-notice" role="status" aria-live="polite" hidden></div>
+    <section class="scale-pane is-active" data-pane-panel="create">
+      <div class="scale-grid">
+        <div class="scale-main">
+          <section class="scale-card">
+            <div class="scale-card-heading"><span class="scale-number">01</span><div><h2>Seu conteúdo original</h2><p>Use um arquivo que você produziu ou possui permissão para transformar.</p></div></div>
+            <label class="scale-upload" for="scaleFile">
+              <span class="scale-upload-symbol">↑</span>
+              <strong id="scaleFileTitle">Escolher vídeo</strong>
+              <small>MP4, MOV, WebM e outros formatos de vídeo aceitos • até 200 MB</small>
+              <input id="scaleFile" type="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,video/mpeg,video/ogg,video/3gpp,video/x-matroska" aria-label="Selecionar vídeo original">
+            </label>
+            <div id="scaleFileInfo" class="scale-file-info" hidden></div>
+            <div class="scale-controls-row">
+              <div><label for="scaleStart">Começar no segundo</label><input id="scaleStart" type="number" min="0" step="0.1" value="0"></div>
+              <div><label for="scaleEnd">Terminar no segundo</label><input id="scaleEnd" type="number" min="1" step="0.1" placeholder="Fim do arquivo"></div>
+              <div><label for="scaleFraming">Enquadramento</label><select id="scaleFraming"><option value="fill">Preencher 9:16 (corte central)</option><option value="fit">Vídeo inteiro (com bordas)</option></select></div>
+            </div>
+          </section>
+          <section class="scale-card">
+            <div class="scale-card-heading"><span class="scale-number">02</span><div><h2>Escolha o template</h2><p>Aplique um visual consistente a todas as variações.</p></div></div>
+            <div class="scale-templates" id="scaleTemplates">
+              <button type="button" class="scale-template selected" data-template="impact" aria-pressed="true"><span class="scale-template-art impact"><i></i><b>SEU TÍTULO</b><em>VÍDEO</em></span><strong>Impacto</strong><small>Título grande no topo</small></button>
+              <button type="button" class="scale-template" data-template="minimal" aria-pressed="false"><span class="scale-template-art minimal"><em>VÍDEO</em><b>Seu título</b></span><strong>Minimalista</strong><small>Texto na parte inferior</small></button>
+              <button type="button" class="scale-template" data-template="news" aria-pressed="false"><span class="scale-template-art news"><i>EM DESTAQUE</i><b>Seu título</b><em>VÍDEO</em></span><strong>Notícia</strong><small>Tarja e informação</small></button>
+            </div>
+            <div class="scale-controls-row">
+              <div><label for="scaleAccent">Cor do destaque</label><input type="color" id="scaleAccent" value="#916bff"></div>
+              <div><label for="scaleSize">Tamanho do texto</label><select id="scaleSize"><option value="small">Pequeno</option><option value="medium" selected>Médio</option><option value="large">Grande</option></select></div>
+            </div>
+          </section>
+          <section class="scale-card">
+            <div class="scale-card-heading"><span class="scale-number">03</span><div><h2>Multiplique com títulos diferentes</h2><p>Uma frase por linha gera um vídeo individual, com o mesmo conteúdo original.</p></div></div>
+            <label for="scaleTopic">Assunto ou ideia central (opcional)</label>
+            <input id="scaleTopic" maxlength="220" placeholder="Ex.: 5 curiosidades sobre GTA 6">
+            <div class="scale-inline-heading"><label for="scaleHeadlines">Títulos das versões</label><button type="button" id="scaleSuggest" class="scale-secondary">✧ Sugerir com IA</button></div>
+            <textarea id="scaleHeadlines" rows="6" maxlength="1400" placeholder="A novidade que ninguém percebeu&#10;Você viu esse detalhe?&#10;O que muda depois desta atualização?"></textarea>
+            <p class="scale-help" id="scaleCount">0 de 12 versões • uma linha por vídeo</p>
+            <label class="scale-consent"><input type="checkbox" id="scaleRights"> <span>Confirmo que tenho os direitos ou a autorização necessária para editar e publicar este vídeo.</span></label>
+            <label class="scale-consent"><input type="checkbox" id="scalePublic"> <span>Entendi que os MP4 finalizados serão disponibilizados por GitHub Releases e poderão ser públicos se o repositório for público.</span></label>
+            <button type="button" id="scaleGenerate" class="scale-primary scale-wide">Gerar lote de vídeos <span>→</span></button>
+            <p class="scale-help">Renderização na nuvem com GitHub Actions. Você pode fechar o navegador após a confirmação do envio.</p>
+          </section>
+        </div>
+        <aside class="scale-side">
+          <section class="scale-card scale-preview-card">
+            <div class="scale-card-heading"><div><h2>Prévia do vídeo</h2><p>Visualização ilustrativa do layout. O MP4 final é criado na nuvem.</p></div></div>
+            <div class="scale-phone" id="scalePhone">
+              <video id="scalePreviewVideo" playsinline muted loop controls preload="metadata" hidden></video>
+              <div id="scalePreviewEmpty" class="scale-phone-placeholder">9:16<br><span>Seu vídeo aparecerá aqui</span></div>
+              <div class="scale-preview-top" id="scalePreviewTop">SEU TÍTULO</div>
+              <div class="scale-preview-bottom" id="scalePreviewBottom" hidden></div>
+              <div class="scale-preview-news" id="scalePreviewNews" hidden>EM DESTAQUE</div>
+            </div>
+            <div class="scale-preview-caption">Formato final: <strong>1080 × 1920 · MP4</strong></div>
+          </section>
+          <section class="scale-card scale-guide">
+            <h3>O que será gerado?</h3>
+            <p>Um arquivo MP4 para cada título, com enquadramento vertical, texto sobreposto e áudio original preservado quando disponível.</p>
+            <p>As versões ficam disponíveis na aba <strong>Criações e downloads</strong> após a renderização.</p>
+          </section>
+        </aside>
+      </div>
+    </section>
+    <section class="scale-pane" data-pane-panel="history">
+      <section class="scale-card"><div class="scale-card-heading"><div><h2>Criações e downloads</h2><p>Acompanhe os trabalhos processados na nuvem e baixe cada versão.</p></div><button type="button" id="scaleRefresh" class="scale-secondary">Atualizar</button></div><div id="scaleHistory" class="scale-history"><p class="scale-help">Carregando criações...</p></div></section>
+    </section>
+    <section class="scale-pane" data-pane-panel="calendar">
+      <section class="scale-card"><div class="scale-card-heading"><div><h2>Planejador de publicações</h2><p>Organize o calendário de postagem e prepare as legendas dos seus vídeos.</p></div></div>
+      <div class="scale-planner-grid"><div><label for="scalePostTitle">Título da postagem</label><input id="scalePostTitle" maxlength="160" placeholder="Ex.: Versão 1 — Reels"><label for="scaleNetwork">Rede social</label><select id="scaleNetwork"><option>Instagram</option><option>TikTok</option><option>YouTube Shorts</option><option>Facebook</option></select></div><div><label for="scalePostDate">Data e horário</label><input id="scalePostDate" type="datetime-local"><label for="scalePostCaption">Legenda</label><textarea id="scalePostCaption" rows="3" maxlength="2000" placeholder="Escreva sua legenda e hashtags"></textarea></div></div>
+      <button type="button" class="scale-primary" id="scaleSavePost">Salvar planejamento</button>
+      <p class="scale-help">O planejamento fica salvo neste navegador. Esta versão não publica automaticamente nem conecta contas sociais; o envio à rede social continua manual.</p>
+      <div id="scalePlanned" class="scale-history"></div></section>
+    </section>
+    <footer class="scale-footer">Shorts Cloud Studio Scale · Feito para os seus próprios conteúdos · Área independente do gerador principal</footer>
+  </main>
+  <script src="/auth-ui.js" defer></script>
+  <script src="/scale-studio.js" defer></script>
+</body>
+</html>

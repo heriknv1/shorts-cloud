@@ -22,7 +22,8 @@ jobs:
         run: |
           node --check lib/scale-handler.js
           node --check api/generate.js
-          python -m py_compile scripts/scale_render.py
+          python -m py_compile scripts/scale_render.py scripts/scale_gemini.py
+          python scripts/test_scale_gemini.py
       - name: Instalar dependências
         run: npm ci
       - name: Compilar as interfaces

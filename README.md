@@ -200,3 +200,15 @@ Rota independente: `/scale.html` (acessível também pelo novo botão na página
 A Vercel precisa de `GITHUB_PAT`, `TARGET_REPO`, `APP_USERNAME`, `APP_PASSWORD`, `AUTH_SECRET`, `BLOB_READ_WRITE_TOKEN` e `WORKFLOW_PAYLOAD_SECRET` (ou a alternativa já usada no Studio). Para sugestões com IA, configure `GROQ_API_KEY` e opcionalmente `GROQ_MODEL`.
 
 Configure no GitHub Actions o secret `WORKFLOW_PAYLOAD_SECRET` com exatamente o mesmo valor da Vercel. O workflow permite fallback para `GROQ_API_KEY` caso a variável de payload não exista em ambos os ambientes. O build gera `scale-studio.js` pelo esbuild junto ao bundle original da página de áudio ilustrado. O novo endpoint `/api/scale` é reescrito para a função existente `/api/generate`, evitando ultrapassar o limite de funções Vercel Hobby.
+
+### Gemini gratuito na aba Studio Scale (outubro de 2026)
+
+- O botão **Sugerir com Gemini** utiliza `gemini-3.1-flash-lite` na API Gemini (geração de texto, sem Groq).
+- A opção **Gemini: encontrar o melhor trecho automaticamente** é voluntária. Ao marcar e confirmar o consentimento, o vídeo privado é enviado temporariamente ao Google Gemini pela API Files no GitHub Actions, analisado para identificar um corte de **15 a 60 segundos**, e excluído por solicitação ao terminar. Se não for possível analisar, o sistema usa o trecho manual selecionado.
+- Essa seleção identifica **um corte por lote**; as até 12 variantes contêm o mesmo trecho, com títulos e templates alternativos. Não há cortes diferentes por título nem geração de imagens/vídeos sintéticos.
+- Vídeos indicados: gravações próprias de até 10 minutos para análise Gemini, **máximo 200 MB** conforme a atual tela de upload. Se a IA estiver desmarcada, o usuário escolhe manualmente um trecho de 2–120 segundos.
+- A Vercel precisa ter `GEMINI_API_KEY` para gerar sugestões e autorizar o corte. O GitHub Actions também precisa ter `GEMINI_API_KEY` como secret para interpretar o arquivo de vídeo; configure **sem expor o valor no frontend, README ou logs**.
+- Para manter o custo da API Gemini em zero, use uma chave vinculada a um projeto **sem faturamento habilitado**, com o modelo Flash-Lite dentro do nível gratuito. Se a cota gratuita acabar, sugestões exibem erro e cortes inteligentes usam o intervalo manual; nunca alternamos automaticamente para modelos pagos. As cotas são por projeto e podem variar conforme o provedor.
+- **Privacidade:** no nível gratuito o Google pode usar entradas e saídas para melhorar seus produtos. O usuário precisa concordar separadamente com o envio do vídeo à API Gemini. Não utilize vídeos sensíveis, confidenciais ou de outras pessoas sem autorização. GitHub Releases continua podendo ser público.
+- As tarifas e limites de GitHub Actions, Vercel Blob, Vercel hosting e tráfego são independentes das cotas da API Gemini. Grátis dentro das cotas disponíveis, não ilimitado.
+- Página: `/scale.html`. As funções antigas do Shorts Cloud não são substituídas por Gemini.

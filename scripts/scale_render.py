@@ -128,6 +128,22 @@ def main():
     end = float(payload.get('end_at') or 0)
     if not all(map(math.isfinite, (duration,start,end))) or start < 0 or end > duration + 0.4 or end <= start or end - start < 2 or end - start > 120:
         raise RuntimeError('Início e fim não combinam com a duração real do vídeo.')
+    # O intervalo informado no painel continua sendo o fallback seguro.
+    selected_by_gemini = None
+    gemini_status = 'desativado'
+    if payload.get('gemini_auto_cut') is True:
+        try:
+            from scale_gemini import analyze_best_clip
+            selected_by_gemini = analyze_best_clip(
+                source, duration, str(payload.get('topic') or '')
+            )
+            start = selected_by_gemini['start']
+            end = selected_by_gemini['end']
+            gemini_status = 'corte escolhido por Gemini'
+        except Exception as exc:
+            # Sem consumir chamadas pagas extras: preserva o corte manual.
+            gemini_status = 'falha na análise: intervalo manual utilizado'
+            print('Análise Gemini indisponível: %s. Usando trecho manual.' % str(exc)[:200],flush=True)
     actual_length = min(duration, end) - start
     results = []
     for index, value in enumerate(titles, 1):
@@ -152,7 +168,9 @@ def main():
         results.append({'file':output.name,'title':title,'seconds':round(actual_length,2)})
     (OUT / 'manifest.json').write_text(json.dumps({
         'topic':str(payload.get('topic',''))[:220],
-        'template':template,'framing':framing,'files':results
+        'template':template,'framing':framing,'files':results,
+        'original_duration':round(duration,2),'selected_start':start,'selected_end':end,
+        'gemini_status':gemini_status,'gemini_reason':selected_by_gemini.get('reason') if selected_by_gemini else ''
     }, ensure_ascii=False, indent=2), encoding='utf-8')
     print('Lote finalizado: %d MP4s.' % len(results), flush=True)
 

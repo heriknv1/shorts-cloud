@@ -47,6 +47,8 @@
               <div><label for="scaleEnd">Terminar no segundo</label><input id="scaleEnd" type="number" min="1" step="0.1" placeholder="Fim do arquivo"></div>
               <div><label for="scaleFraming">Enquadramento</label><select id="scaleFraming"><option value="fill">Preencher 9:16 (corte central)</option><option value="fit">Vídeo inteiro (com bordas)</option></select></div>
             </div>
+            <label class="scale-consent"><input type="checkbox" id="scaleGeminiCut"> <span><strong>Gemini: encontrar o melhor trecho automaticamente</strong> (opcional). Analisa o vídeo de até 10 minutos e seleciona um corte de 15 a 60 segundos. Se a IA falhar, o sistema usa o intervalo manual indicado acima.</span></label>
+            <p class="scale-help">Para usar o Gemini, envie um vídeo com falas ou acontecimentos identificáveis. O modelo escolhe somente <strong>um trecho por lote</strong>; as versões continuam diferenciadas pelos títulos e templates.</p>
           </section>
           <section class="scale-card">
             <div class="scale-card-heading"><span class="scale-number">02</span><div><h2>Escolha o template</h2><p>Aplique um visual consistente a todas as variações.</p></div></div>
@@ -64,13 +66,14 @@
             <div class="scale-card-heading"><span class="scale-number">03</span><div><h2>Multiplique com títulos diferentes</h2><p>Uma frase por linha gera um vídeo individual, com o mesmo conteúdo original.</p></div></div>
             <label for="scaleTopic">Assunto ou ideia central (opcional)</label>
             <input id="scaleTopic" maxlength="220" placeholder="Ex.: 5 curiosidades sobre GTA 6">
-            <div class="scale-inline-heading"><label for="scaleHeadlines">Títulos das versões</label><button type="button" id="scaleSuggest" class="scale-secondary">✧ Sugerir com IA</button></div>
+            <div class="scale-inline-heading"><label for="scaleHeadlines">Títulos das versões</label><button type="button" id="scaleSuggest" class="scale-secondary">✧ Sugerir com Gemini</button></div>
             <textarea id="scaleHeadlines" rows="6" maxlength="1400" placeholder="A novidade que ninguém percebeu&#10;Você viu esse detalhe?&#10;O que muda depois desta atualização?"></textarea>
             <p class="scale-help" id="scaleCount">0 de 12 versões • uma linha por vídeo</p>
+            <label class="scale-consent" id="scaleGeminiConsentWrap" hidden><input type="checkbox" id="scaleGeminiConsent"> <span>Autorizo o envio temporário deste vídeo ao serviço Gemini do Google para análise. Entendo que os dados enviados no nível gratuito podem ser usados pelo Google para melhorar seus produtos. Não enviarei vídeos privados ou sensíveis.</span></label>
             <label class="scale-consent"><input type="checkbox" id="scaleRights"> <span>Confirmo que tenho os direitos ou a autorização necessária para editar e publicar este vídeo.</span></label>
             <label class="scale-consent"><input type="checkbox" id="scalePublic"> <span>Entendi que os MP4 finalizados serão disponibilizados por GitHub Releases e poderão ser públicos se o repositório for público.</span></label>
             <button type="button" id="scaleGenerate" class="scale-primary scale-wide">Gerar lote de vídeos <span>→</span></button>
-            <p class="scale-help">Renderização na nuvem com GitHub Actions. Você pode fechar o navegador após a confirmação do envio.</p>
+            <p class="scale-help">Renderização na nuvem com GitHub Actions. O Gemini é opcional e utiliza o nível gratuito sujeito às cotas disponíveis. Não há garantia de uso ilimitado. Você pode fechar o navegador após a confirmação do envio.</p>
           </section>
         </div>
         <aside class="scale-side">
